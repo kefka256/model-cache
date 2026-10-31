@@ -66,7 +66,7 @@ function ModelCachePane({ rest }) {
 
   const evictMut = useMutation({
     mutationFn: (dir) => rest('/evict', { method: 'POST', body: { model: dir } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-cold'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
   })
 
   const statusData = status.data || {}
@@ -84,6 +84,11 @@ function ModelCachePane({ rest }) {
           jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
         ]
       }),
+      // Evict status
+      evictMut.data ? jsx('div', {
+        className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
+        children: evictMut.data.output || ''
+      }) : null,
       // Hot cache
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
