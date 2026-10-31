@@ -110,18 +110,23 @@ class EvictBody(BaseModel):
 
 @router.post("/evict")
 def evict(payload: EvictBody):
-    """Evict a model from hot cache (syncs back to array first)."""
+    """Evict a model from hot cache. Verifies cold has it (syncs if not), then deletes from NVMe."""
     # Check if model exists in hot cache
-    check = _ssh(f"ls -d {HOT}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
-    if 'NOT_FOUND' in check:
+    hot_check = _ssh(f"ls -d {HOT}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
+    if 'NOT_FOUND' in hot_check:
         return {"ok": False, "output": f"Model {payload.model} not found in hot cache"}
-    # Sync back to array (source of truth)
-    sync_cmd = f"rsync -a --progress {HOT}/{payload.model}/ {COLD}/{payload.model}/ 2>&1 | tail -3"
-    sync_out = _ssh(sync_cmd, timeout=300)
-    # Delete from NVMe
-    rm_cmd = f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'"
-    out = _ssh(rm_cmd)
-    return {"ok": True, "output": f"Synced back to array.\n{sync_out}\n{out}"}
+    # Check if model exists on cold side
+    cold_check = _ssh(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
+    if 'NOT_FOUND' in cold_check:
+        # Cold doesn't have it — sync first
+        sync_out = _ssh(f"rsync -a --progress {HOT}/{payload.model}/ {COLD}/{payload.model}/ 2>&1 | tail -3", timeout=300)
+        # Verify sync succeeded
+        verify = _ssh(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
+        if 'NOT_FOUND' in verify:
+            return {"ok": False, "output": f"Sync to cold failed, aborting evict.\n{sync_out}"}
+    # Cold has it (or sync succeeded) — safe to delete from NVMe
+    out = _ssh(f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'")
+    return {"ok": True, "output": f"Cold verified. {out}"}
 
 
 @router.get("/hotlist")
