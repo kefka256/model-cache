@@ -2,7 +2,7 @@ import { cn, host, useQuery, useMutation, useQueryClient } from '@hermes/plugin-
 import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState } from 'react'
 
-const ID = 'model-cache-src'
+const ID = 'model-cache'
 
 function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
   const [expanded, setExpanded] = useState(false)
