@@ -111,9 +111,17 @@ class EvictBody(BaseModel):
 @router.post("/evict")
 def evict(payload: EvictBody):
     """Evict a model from hot cache (syncs back to array first)."""
-    cmd = f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'"
-    out = _ssh(cmd)
-    return {"ok": True, "output": out}
+    # Check if model exists in hot cache
+    check = _ssh(f"ls -d {HOT}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
+    if 'NOT_FOUND' in check:
+        return {"ok": False, "output": f"Model {payload.model} not found in hot cache"}
+    # Sync back to array (source of truth)
+    sync_cmd = f"rsync -a --progress {HOT}/{payload.model}/ {COLD}/{payload.model}/ 2>&1 | tail -3"
+    sync_out = _ssh(sync_cmd, timeout=300)
+    # Delete from NVMe
+    rm_cmd = f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'"
+    out = _ssh(rm_cmd)
+    return {"ok": True, "output": f"Synced back to array.\n{sync_out}\n{out}"}
 
 
 @router.get("/hotlist")
