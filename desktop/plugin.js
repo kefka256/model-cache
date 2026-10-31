@@ -95,9 +95,9 @@ function ModelCachePane({ rest }) {
             children: [
               jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
               jsx('button', {
-                className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-(--ui-text-primary) border border-(--ui-stroke-secondary)',
+                className: 'w-5 h-5 flex items-center justify-center rounded-full text-(--ui-text-tertiary) hover:text-(--ui-text-primary) border border-(--ui-stroke-secondary) text-[12px] leading-none',
                 onClick: () => { qc.invalidateQueries({ queryKey: ['mc-status'] }); qc.invalidateQueries({ queryKey: ['mc-cold'] }); qc.invalidateQueries({ queryKey: ['mc-hot'] }) },
-                children: 'refresh'
+                children: '↻'
               }),
             ]
           }),
