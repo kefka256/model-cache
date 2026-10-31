@@ -17,7 +17,7 @@ from pydantic import BaseModel
 router = APIRouter()
 
 GOGO = "root@192.168.0.11"
-COLD = "/opt/data/plugins/model-cache/cold/hub"
+COLD = "/mnt/gogo/AI/models"
 HOT = "/opt/data/plugins/model-cache/hot/hub"
 
 
