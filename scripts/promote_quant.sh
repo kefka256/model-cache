@@ -7,7 +7,7 @@ MODEL="${1##*/}"
 PATTERN="${2:-}"
 if [[ -d /mnt/gogo/AI/models ]]; then LIB=/mnt/gogo/AI/models; elif [[ -d /mnt/user/AI/models ]]; then LIB=/mnt/user/AI/models; else LIB=/mnt/user/AI/models; fi
 SRC="$LIB/models--${ORG}--${MODEL}"
-DST="/opt/data/plugins/model-cache/hot/models--${ORG}--${MODEL}"
+DST="/opt/data/plugins/model-cache/models--${ORG}--${MODEL}"
 [[ -d "$SRC" ]] || { echo "ERROR: $SRC not found"; exit 1; }
 mkdir -p "$DST/blobs" "$DST/snapshots" "$DST/refs"
 

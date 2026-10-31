@@ -17,8 +17,8 @@ from pydantic import BaseModel
 router = APIRouter()
 
 GOGO = "root@192.168.0.11"
-COLD = "/opt/data/plugins/model-cache/cold"
-HOT = "/opt/data/plugins/model-cache/hot"
+COLD = "/opt/data/plugins/model-cache-cold"
+HOT = "/opt/data/plugins/model-cache"
 
 
 def _local(cmd: str, timeout: int = 30) -> str:
@@ -40,7 +40,7 @@ def get_status():
     """Cache and array space usage."""
     cold_du = _local(f"du -sh {COLD} 2>/dev/null | cut -f1")
     hot_du = _local(f"du -sh {HOT} 2>/dev/null | cut -f1")
-    cache_df = _local("df -h /opt/data/plugins/model-cache/hot | tail -1")
+    cache_df = _local("df -h /opt/data/plugins/model-cache | tail -1")
     parts = cache_df.split()
     return {
         "cold_size": cold_du,
@@ -107,9 +107,9 @@ class PromoteBody(BaseModel):
 def promote(payload: PromoteBody):
     """Promote a model (or specific quant) from cold to hot."""
     if payload.quant:
-        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_quant.sh '{payload.model}' '{payload.quant}'"
+        cmd = f"bash /opt/data/plugins/model-cache-src/scripts/promote_quant.sh '{payload.model}' '{payload.quant}'"
     else:
-        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_model.sh '{payload.model}'"
+        cmd = f"bash /opt/data/plugins/model-cache-src/scripts/promote_model.sh '{payload.model}'"
     out = _local(cmd, timeout=1800)
     return {"ok": True, "output": out}
 
@@ -158,7 +158,7 @@ def evict(payload: EvictBody):
 @router.get("/hotlist")
 def get_hotlist():
     """Read the hotlist file."""
-    out = _local("cat /opt/data/plugins/model-cache/docs/models/hotlist.txt 2>/dev/null || echo ''")
+    out = _local("cat /opt/data/plugins/model-cache-src/docs/models/hotlist.txt 2>/dev/null || echo ''")
     return {"content": out}
 
 
@@ -171,19 +171,19 @@ def update_hotlist(payload: HotlistBody):
     """Update the hotlist file."""
     # Write via SSH using heredoc
     escaped = payload.content.replace("'", "'\\''")
-    _local(f"cat > /opt/data/plugins/model-cache/docs/models/hotlist.txt << 'HOTLIST_EOF'\n{payload.content}\nHOTLIST_EOF")
+    _local(f"cat > /opt/data/plugins/model-cache-src/docs/models/hotlist.txt << 'HOTLIST_EOF'\n{payload.content}\nHOTLIST_EOF")
     return {"ok": True}
 
 
 @router.post("/evict-stale")
 def evict_stale():
     """Run the full evict script (sync back + evict idle >7d)."""
-    out = _local("bash /opt/data/plugins/model-cache/scripts/evict_models.sh", timeout=300)
+    out = _local("bash /opt/data/plugins/model-cache-src/scripts/evict_models.sh", timeout=300)
     return {"ok": True, "output": out}
 
 
 @router.post("/promote-hot")
 def promote_hot():
     """Run the full promote_hot script (pre-warm all hotlist entries)."""
-    out = _local("bash /opt/data/plugins/model-cache/scripts/promote_hot.sh", timeout=600)
+    out = _local("bash /opt/data/plugins/model-cache-src/scripts/promote_hot.sh", timeout=600)
     return {"ok": True, "output": out}
