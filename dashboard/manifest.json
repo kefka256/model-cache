@@ -1,0 +1,8 @@
+{
+  "name": "model-cache",
+  "label": "Model Cache",
+  "description": "Tiered model storage manager — promote models from array (cold) to NVMe (hot), evict stale ones, manage hotlist, show space usage.",
+  "icon": "Database",
+  "version": "0.1.0",
+  "api": "plugin_api.py"
+}

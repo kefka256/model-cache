@@ -38,34 +38,34 @@ function ModelRow({ model, onPromote, onEvict, isHot }) {
   })
 }
 
-function ModelCachePane() {
+function ModelCachePane({ rest }) {
   const qc = useQueryClient()
 
   const status = useQuery({
     queryKey: ['mc-status'],
-    queryFn: () => host.request('plugin.rest', { path: '/status', method: 'GET' }),
+    queryFn: () => rest('/status', { method: 'GET' }),
     refetchInterval: 10000,
   })
 
   const cold = useQuery({
     queryKey: ['mc-cold'],
-    queryFn: () => host.request('plugin.rest', { path: '/cold', method: 'GET' }),
+    queryFn: () => rest('/cold', { method: 'GET' }),
     refetchInterval: 30000,
   })
 
   const hot = useQuery({
     queryKey: ['mc-hot'],
-    queryFn: () => host.request('plugin.rest', { path: '/hot', method: 'GET' }),
+    queryFn: () => rest('/hot', { method: 'GET' }),
     refetchInterval: 30000,
   })
 
   const promoteMut = useMutation({
-    mutationFn: (dir) => host.request('plugin.rest', { path: '/promote', method: 'POST', body: { model: dir } }),
+    mutationFn: (dir) => rest('/promote', { method: 'POST', body: { model: dir } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
   })
 
   const evictMut = useMutation({
-    mutationFn: (dir) => host.request('plugin.rest', { path: '/evict', method: 'POST', body: { model: dir } }),
+    mutationFn: (dir) => rest('/evict', { method: 'POST', body: { model: dir } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
   })
 
@@ -120,12 +120,14 @@ export default {
       }
     })
 
+    const rest = ctx.rest.bind(ctx)
+
     ctx.register({
       id: 'pane',
       area: 'panes',
       title: 'model cache',
       data: { placement: 'right', width: '320px' },
-      render: () => jsx(ModelCachePane, {})
+      render: () => jsx(ModelCachePane, { rest })
     })
   }
 }
