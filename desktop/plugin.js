@@ -81,6 +81,8 @@ function ModelCachePane({ rest }) {
 
   const handleRefresh = async () => {
     setRefreshing(true)
+    promoteMut.reset()
+    evictMut.reset()
     await Promise.all([
       qc.invalidateQueries({ queryKey: ['mc-status'] }),
       qc.invalidateQueries({ queryKey: ['mc-cold'] }),
