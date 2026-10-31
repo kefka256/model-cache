@@ -67,16 +67,27 @@ function ModelCachePane({ rest }) {
   const promoteMut = useMutation({
     mutationFn: (dir) => rest('/promote', { method: 'POST', body: { model: dir } }),
     onSuccess: (data, dir) => {
-      setRecentlyPromoted(prev => new Set([...prev, dir]))
-      qc.invalidateQueries({ queryKey: ['mc-hot'] })
-      qc.invalidateQueries({ queryKey: ['mc-cold'] })
-      qc.invalidateQueries({ queryKey: ['mc-status'] })
+      if (data && data.ok) {
+        setRecentlyPromoted(prev => new Set([...prev, dir]))
+        qc.refetchQueries({ queryKey: ['mc-hot'] })
+        qc.refetchQueries({ queryKey: ['mc-cold'] })
+        qc.refetchQueries({ queryKey: ['mc-status'] })
+      }
     },
   })
 
   const evictMut = useMutation({
     mutationFn: (dir) => rest('/evict', { method: 'POST', body: { model: dir } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-cold'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
+    onSuccess: (data) => {
+      if (data && data.ok) {
+        qc.refetchQueries({ queryKey: ['mc-hot'] })
+        qc.refetchQueries({ queryKey: ['mc-cold'] })
+        qc.refetchQueries({ queryKey: ['mc-status'] })
+      }
+    },
+    onError: (err) => {
+      console.error('Evict failed:', err)
+    },
   })
 
   const handleRefresh = async () => {
@@ -84,9 +95,9 @@ function ModelCachePane({ rest }) {
     promoteMut.reset()
     evictMut.reset()
     await Promise.all([
-      qc.invalidateQueries({ queryKey: ['mc-status'] }),
-      qc.invalidateQueries({ queryKey: ['mc-cold'] }),
-      qc.invalidateQueries({ queryKey: ['mc-hot'] }),
+      qc.refetchQueries({ queryKey: ['mc-status'] }),
+      qc.refetchQueries({ queryKey: ['mc-cold'] }),
+      qc.refetchQueries({ queryKey: ['mc-hot'] }),
     ])
     setTimeout(() => setRefreshing(false), 800)
   }
