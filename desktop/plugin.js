@@ -13,7 +13,7 @@ function SpaceBar({ used, total }) {
   })
 }
 
-function ModelRow({ model, onPromote, onEvict, isHot, recentlyPromoted }) {
+function ModelRow({ model, onPromote, onEvict, isHot, recentlyPromoted, promoting }) {
   const isNew = isHot && recentlyPromoted && recentlyPromoted.has(model.dir)
   return jsxs('div', {
     className: 'flex items-center justify-between gap-2 px-2 py-1 text-xs hover:bg-(--chrome-action-hover)',
@@ -30,12 +30,14 @@ function ModelRow({ model, onPromote, onEvict, isHot, recentlyPromoted }) {
         ? jsx('button', {
             className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
             onClick: () => onEvict(model.dir),
+            disabled: promoting,
             children: 'evict'
           })
         : jsx('button', {
-            className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400',
-            onClick: () => onPromote(model.dir),
-            children: 'promote'
+            className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400 ${promoting ? 'opacity-50 cursor-not-allowed' : ''}`,
+            onClick: () => !promoting && onPromote(model.dir),
+            disabled: promoting,
+            children: promoting ? '...' : 'promote'
           })
     ]
   })
@@ -128,8 +130,14 @@ function ModelCachePane({ rest }) {
           }),
         ]
       }),
-      // Promote status
-      promoteMut.data ? jsx('div', {
+      // Promote status / progress
+      promoteMut.isPending ? jsx('div', {
+        className: 'text-xs text-(--ui-text-tertiary) mt-1 px-2 flex items-center gap-1',
+        children: [
+          jsx('span', { className: 'animate-spin inline-block', children: '↻' }),
+          jsx('span', { children: 'Promoting... (this may take a while)' }),
+        ]
+      }) : promoteMut.data ? jsx('div', {
         className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
         children: promoteMut.data.output || ''
       }) : null,
@@ -148,6 +156,7 @@ function ModelCachePane({ rest }) {
         model: m,
         isHot: true,
         recentlyPromoted,
+        promoting: promoteMut.isPending,
         onEvict: (dir) => evictMut.mutate(dir),
       })),
       // Cold storage
@@ -159,6 +168,8 @@ function ModelCachePane({ rest }) {
         key: m.dir,
         model: m,
         isHot: false,
+        recentlyPromoted,
+        promoting: promoteMut.isPending,
         onPromote: (dir) => promoteMut.mutate(dir),
       })),
     ]
