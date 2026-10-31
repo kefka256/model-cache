@@ -85,12 +85,22 @@ function ModelCachePane({ rest }) {
   return jsxs('div', {
     className: 'flex h-full flex-col gap-2 p-3 text-sm overflow-auto',
     children: [
-      // Status bar
+      // Status bar with refresh button
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
           jsx('span', { children: `Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
-          jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
+          jsxs('div', {
+            className: 'flex items-center gap-2',
+            children: [
+              jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
+              jsx('button', {
+                className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-(--ui-text-primary) border border-(--ui-stroke-secondary)',
+                onClick: () => { qc.invalidateQueries({ queryKey: ['mc-status'] }); qc.invalidateQueries({ queryKey: ['mc-cold'] }); qc.invalidateQueries({ queryKey: ['mc-hot'] }) },
+                children: 'refresh'
+              }),
+            ]
+          }),
         ]
       }),
       // Promote status
