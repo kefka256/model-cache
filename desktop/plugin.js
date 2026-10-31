@@ -44,6 +44,7 @@ function ModelRow({ model, onPromote, onEvict, isHot, recentlyPromoted }) {
 function ModelCachePane({ rest }) {
   const qc = useQueryClient()
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
+  const [refreshing, setRefreshing] = useState(false)
 
   const status = useQuery({
     queryKey: ['mc-status'],
@@ -78,6 +79,16 @@ function ModelCachePane({ rest }) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-cold'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
   })
 
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['mc-status'] }),
+      qc.invalidateQueries({ queryKey: ['mc-cold'] }),
+      qc.invalidateQueries({ queryKey: ['mc-hot'] }),
+    ])
+    setTimeout(() => setRefreshing(false), 800)
+  }
+
   const statusData = status.data || {}
   const coldModels = cold.data?.models || []
   const hotModels = hot.data?.models || []
@@ -95,8 +106,9 @@ function ModelCachePane({ rest }) {
             children: [
               jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
               jsx('button', {
-                className: 'w-5 h-5 flex items-center justify-center rounded-full text-(--ui-text-tertiary) hover:text-(--ui-text-primary) border border-(--ui-stroke-secondary) text-[12px] leading-none',
-                onClick: () => { qc.invalidateQueries({ queryKey: ['mc-status'] }); qc.invalidateQueries({ queryKey: ['mc-cold'] }); qc.invalidateQueries({ queryKey: ['mc-hot'] }) },
+                className: `w-5 h-5 flex items-center justify-center rounded-full text-(--ui-text-tertiary) hover:text-(--ui-text-primary) border border-(--ui-stroke-secondary) text-[12px] leading-none ${refreshing ? 'animate-spin' : ''}`,
+                onClick: handleRefresh,
+                disabled: refreshing,
                 children: '↻'
               }),
             ]
