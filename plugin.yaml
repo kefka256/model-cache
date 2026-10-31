@@ -1,0 +1,9 @@
+name: model-cache
+version: "0.1.0"
+description: "Model cache tier manager — promote models from array (cold) to NVMe (hot), evict stale ones. Manages the hotlist and shows space usage."
+author: hermes
+kind: standalone
+api: plugin_api.py
+requires_hermes: ">=0.21.5"
+platforms: []
+optional_env: []
