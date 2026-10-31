@@ -1,5 +1,6 @@
 import { cn, host, useQuery, useMutation, useQueryClient } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
+import { useState } from 'react'
 
 const ID = 'model-cache'
 
@@ -12,7 +13,8 @@ function SpaceBar({ used, total }) {
   })
 }
 
-function ModelRow({ model, onPromote, onEvict, isHot }) {
+function ModelRow({ model, onPromote, onEvict, isHot, recentlyPromoted }) {
+  const isNew = isHot && recentlyPromoted && recentlyPromoted.has(model.dir)
   return jsxs('div', {
     className: 'flex items-center justify-between gap-2 px-2 py-1 text-xs hover:bg-(--chrome-action-hover)',
     children: [
@@ -20,6 +22,7 @@ function ModelRow({ model, onPromote, onEvict, isHot }) {
         className: 'flex-1 truncate',
         children: [
           jsx('span', { className: 'font-medium', children: model.name }),
+          isNew ? jsx('span', { className: 'ml-1 text-green-400 text-[10px]', children: '★ NEW' }) : null,
           jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: model.size }),
         ]
       }),
@@ -40,6 +43,7 @@ function ModelRow({ model, onPromote, onEvict, isHot }) {
 
 function ModelCachePane({ rest }) {
   const qc = useQueryClient()
+  const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
 
   const status = useQuery({
     queryKey: ['mc-status'],
@@ -61,7 +65,12 @@ function ModelCachePane({ rest }) {
 
   const promoteMut = useMutation({
     mutationFn: (dir) => rest('/promote', { method: 'POST', body: { model: dir } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mc-hot'] }); qc.invalidateQueries({ queryKey: ['mc-status'] }) },
+    onSuccess: (data, dir) => {
+      setRecentlyPromoted(prev => new Set([...prev, dir]))
+      qc.invalidateQueries({ queryKey: ['mc-hot'] })
+      qc.invalidateQueries({ queryKey: ['mc-cold'] })
+      qc.invalidateQueries({ queryKey: ['mc-status'] })
+    },
   })
 
   const evictMut = useMutation({
@@ -84,6 +93,11 @@ function ModelCachePane({ rest }) {
           jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
         ]
       }),
+      // Promote status
+      promoteMut.data ? jsx('div', {
+        className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
+        children: promoteMut.data.output || ''
+      }) : null,
       // Evict status
       evictMut.data ? jsx('div', {
         className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
@@ -98,6 +112,7 @@ function ModelCachePane({ rest }) {
         key: m.dir,
         model: m,
         isHot: true,
+        recentlyPromoted,
         onEvict: (dir) => evictMut.mutate(dir),
       })),
       // Cold storage
