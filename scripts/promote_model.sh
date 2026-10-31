@@ -5,12 +5,12 @@ set -euo pipefail
 ORG="${1%%/*}"
 MODEL="${1##*/}"
 # Auto-detect storage paths (works on both gogo host and mounted container)
-LIB=/opt/data/plugins/model-cache/cold
+LIB=/opt/data/plugins/model-cache/cold/hub
 SRC="$LIB/models--${ORG}--${MODEL}"
-DST="/opt/data/plugins/model-cache/hot/models--${ORG}--${MODEL}"
+DST="/opt/data/plugins/model-cache/hot/hub/models--${ORG}--${MODEL}"
 if [[ ! -d "$SRC" ]]; then
   echo "ERROR: not found on array: $SRC" >&2; exit 1
 fi
-mkdir -p /opt/data/plugins/model-cache/hot
+mkdir -p /opt/data/plugins/model-cache/hot/hub
 rsync -a --progress "$SRC/" "$DST/"
 echo "Promoted: $ORG/$MODEL -> NVMe cache"
