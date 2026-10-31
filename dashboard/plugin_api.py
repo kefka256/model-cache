@@ -75,7 +75,7 @@ def list_cold():
 
 @router.get("/hot")
 def list_hot():
-    """List models in hot cache (NVMe)."""
+    """List models in hot cache (NVMe) with their quants."""
     out = _ssh(f"ls {HOT} 2>/dev/null | grep '^models--' || echo ''")
     models = []
     for line in out.splitlines():
@@ -84,7 +84,15 @@ def list_hot():
             continue
         name = line[len("models--"):].replace("--", "/", 1).replace("--", "-")
         size = _ssh(f"du -sh {HOT}/{line} 2>/dev/null | cut -f1")
-        models.append({"dir": line, "name": name, "size": size})
+        # List quants (gguf files in snapshots)
+        quant_out = _ssh(f"find {HOT}/{line}/snapshots -name '*.gguf' 2>/dev/null | sed 's|.*/||' | sort -u || echo ''")
+        quants = [q.strip() for q in quant_out.splitlines() if q.strip()]
+        # Get size of each quant blob
+        quant_sizes = {}
+        for q in quants:
+            qsize = _ssh(f"du -sh {HOT}/{line}/blobs/{q} 2>/dev/null | cut -f1")
+            quant_sizes[q] = qsize
+        models.append({"dir": line, "name": name, "size": size, "quants": quants, "quant_sizes": quant_sizes})
     return {"models": models}
 
 
@@ -100,33 +108,49 @@ def promote(payload: PromoteBody):
         cmd = f"bash /mnt/user/AI/scripts/promote_quant.sh '{payload.model}' '{payload.quant}'"
     else:
         cmd = f"bash /mnt/user/AI/scripts/promote_model.sh '{payload.model}'"
-    out = _ssh(cmd, timeout=300)
+    out = _ssh(cmd, timeout=1800)
     return {"ok": True, "output": out}
 
 
 class EvictBody(BaseModel):
     model: str
+    quant: Optional[str] = None
 
 
 @router.post("/evict")
 def evict(payload: EvictBody):
-    """Evict a model from hot cache. Verifies cold has it (syncs if not), then deletes from NVMe."""
-    # Check if model exists in hot cache
+    """Evict a model or individual quant from hot cache. Syncs to cold first."""
     hot_check = _ssh(f"ls -d {HOT}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
     if 'NOT_FOUND' in hot_check:
         return {"ok": False, "output": f"Model {payload.model} not found in hot cache"}
-    # Check if model exists on cold side
-    cold_check = _ssh(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
-    if 'NOT_FOUND' in cold_check:
-        # Cold doesn't have it — sync first
-        sync_out = _ssh(f"rsync -a --progress {HOT}/{payload.model}/ {COLD}/{payload.model}/ 2>&1 | tail -3", timeout=300)
-        # Verify sync succeeded
-        verify = _ssh(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
-        if 'NOT_FOUND' in verify:
-            return {"ok": False, "output": f"Sync to cold failed, aborting evict.\n{sync_out}"}
-    # Cold has it (or sync succeeded) — safe to delete from NVMe
-    out = _ssh(f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'")
-    return {"ok": True, "output": f"Cold verified. {out}"}
+
+    if payload.quant:
+        # Evict individual quant
+        cold_quant = _ssh(f"ls {COLD}/{payload.model}/blobs/{payload.quant} 2>/dev/null || echo 'NOT_FOUND'")
+        if 'NOT_FOUND' in cold_quant:
+            _ssh(f"mkdir -p {COLD}/{payload.model}/blobs 2>/dev/null", timeout=30)
+            _ssh(f"rsync -a {HOT}/{payload.model}/blobs/{payload.quant} {COLD}/{payload.model}/blobs/ 2>&1", timeout=300)
+            snap_dir = _ssh(f"ls -d {HOT}/{payload.model}/snapshots/*/ 2>/dev/null | head -1").strip()
+            if snap_dir:
+                snap_name = snap_dir.rstrip('/').split('/')[-1]
+                _ssh(f"mkdir -p {COLD}/{payload.model}/snapshots/{snap_name} 2>/dev/null; ln -sf ../../blobs/{payload.quant} {COLD}/{payload.model}/snapshots/{snap_name}/{payload.quant} 2>/dev/null", timeout=30)
+        _ssh(f"rm -f {HOT}/{payload.model}/blobs/{payload.quant}")
+        _ssh(f"find {HOT}/{payload.model}/snapshots -name '{payload.quant}' -delete 2>/dev/null")
+        remaining = _ssh(f"find {HOT}/{payload.model}/snapshots -name '*.gguf' 2>/dev/null | wc -l")
+        if remaining.strip() == '0':
+            _ssh(f"rm -rf {HOT}/{payload.model}")
+            return {"ok": True, "output": f"Evicted {payload.quant}. No quants remain — removed model directory."}
+        return {"ok": True, "output": f"Evicted {payload.quant}. {remaining.strip()} quant(s) remain."}
+    else:
+        # Evict entire model
+        cold_check = _ssh(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
+        if 'NOT_FOUND' in cold_check:
+            sync_out = _ssh(f"rsync -a {HOT}/{payload.model}/ {COLD}/{payload.model}/ 2>&1 | tail -3", timeout=600)
+            verify = _ssh(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
+            if 'NOT_FOUND' in verify:
+                return {"ok": False, "output": f"Sync to cold failed, aborting evict.\n{sync_out}"}
+        out = _ssh(f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'")
+        return {"ok": True, "output": f"Cold verified. {out}"}
 
 
 @router.get("/hotlist")

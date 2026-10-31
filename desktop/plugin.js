@@ -4,41 +4,61 @@ import { useState } from 'react'
 
 const ID = 'model-cache'
 
-function SpaceBar({ used, total }) {
-  return jsxs('div', {
-    className: 'flex items-center gap-2 text-xs text-(--ui-text-tertiary)',
-    children: [
-      jsx('span', { children: `Cache: ${used} / ${total}` }),
-    ]
-  })
-}
+function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
+  const [expanded, setExpanded] = useState(false)
+  const quants = model.quants || []
+  const quantSizes = model.quant_sizes || {}
 
-function ModelRow({ model, onPromote, onEvict, isHot, recentlyPromoted, promoting }) {
-  const isNew = isHot && recentlyPromoted && recentlyPromoted.has(model.dir)
   return jsxs('div', {
-    className: 'flex items-center justify-between gap-2 px-2 py-1 text-xs hover:bg-(--chrome-action-hover)',
+    className: 'border-b border-(--ui-border-subtle)',
     children: [
+      // Model head row
       jsxs('div', {
-        className: 'flex-1 truncate',
+        className: 'flex items-center justify-between gap-2 px-2 py-1.5 text-xs hover:bg-(--chrome-action-hover)',
         children: [
-          jsx('span', { className: 'font-medium', children: model.name }),
-          isNew ? jsx('span', { className: 'ml-1 text-green-400 text-[10px]', children: '★ NEW' }) : null,
-          jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: model.size }),
+          jsxs('div', {
+            className: 'flex-1 truncate flex items-center gap-1 cursor-pointer',
+            onClick: () => setExpanded(!expanded),
+            children: [
+              jsx('span', { className: 'text-(--ui-text-quaternary) text-[10px]', children: expanded ? '▼' : '▶' }),
+              jsx('span', { className: 'font-medium', children: model.name }),
+              jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: model.size }),
+              jsx('span', { className: 'ml-2 text-(--ui-text-quaternary) text-[10px]', children: `(${quants.length} quant${quants.length !== 1 ? 's' : ''})` }),
+            ]
+          }),
+          jsx('button', {
+            className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
+            onClick: () => onEvictAll(model.dir),
+            disabled: promoting,
+            children: promoting ? '...' : 'evict all'
+          })
         ]
       }),
-      isHot
-        ? jsx('button', {
-            className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
-            onClick: () => onEvict(model.dir),
-            disabled: promoting,
-            children: 'evict'
-          })
-        : jsx('button', {
-            className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400 ${promoting ? 'opacity-50 cursor-not-allowed' : ''}`,
-            onClick: () => !promoting && onPromote(model.dir),
-            disabled: promoting,
-            children: promoting ? '...' : 'promote'
-          })
+      // Quants (collapsible)
+      expanded ? jsxs('div', {
+        className: 'pl-6 pb-1',
+        children: quants.length > 0
+          ? quants.map(q => jsxs('div', {
+              key: q,
+              className: 'flex items-center justify-between gap-2 px-2 py-0.5 text-[11px] hover:bg-(--chrome-action-hover)',
+              children: [
+                jsxs('div', {
+                  className: 'flex-1 truncate',
+                  children: [
+                    jsx('span', { children: q }),
+                    jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: quantSizes[q] || '' }),
+                  ]
+                }),
+                jsx('button', {
+                  className: 'px-1.5 py-0.5 rounded text-(--ui-text-quaternary) hover:text-red-400 text-[10px]',
+                  onClick: () => onEvictQuant(model.dir, q),
+                  disabled: promoting,
+                  children: 'evict'
+                })
+              ]
+            }))
+          : jsx('div', { className: 'px-2 py-0.5 text-[11px] text-(--ui-text-quaternary)', children: 'No .gguf files found' })
+      }) : null
     ]
   })
 }
@@ -79,7 +99,7 @@ function ModelCachePane({ rest }) {
   })
 
   const evictMut = useMutation({
-    mutationFn: (dir) => rest('/evict', { method: 'POST', body: { model: dir } }),
+    mutationFn: ({ model, quant }) => rest('/evict', { method: 'POST', body: { model, quant } }),
     onSuccess: (data) => {
       if (data && data.ok) {
         qc.refetchQueries({ queryKey: ['mc-hot'] })
@@ -107,6 +127,7 @@ function ModelCachePane({ rest }) {
   const statusData = status.data || {}
   const coldModels = cold.data?.models || []
   const hotModels = hot.data?.models || []
+  const promoting = evictMut.isPending || promoteMut.isPending
 
   return jsxs('div', {
     className: 'flex h-full flex-col gap-2 p-3 text-sm overflow-auto',
@@ -131,7 +152,7 @@ function ModelCachePane({ rest }) {
         ]
       }),
       // Promote status / progress
-      promoteMut.isPending ? jsx('div', {
+      promoteMut.isPending ? jsxs('div', {
         className: 'text-xs text-(--ui-text-tertiary) mt-1 px-2 flex items-center gap-1',
         children: [
           jsx('span', { className: 'animate-spin inline-block', children: '↻' }),
@@ -151,27 +172,37 @@ function ModelCachePane({ rest }) {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Hot (NVMe) — ${hotModels.length} models`
       }),
-      ...hotModels.map(m => jsx(ModelRow, {
+      ...hotModels.map(m => jsx(ModelGroup, {
         key: m.dir,
         model: m,
-        isHot: true,
-        recentlyPromoted,
-        promoting: promoteMut.isPending,
-        onEvict: (dir) => evictMut.mutate(dir),
+        onEvictQuant: (model, quant) => evictMut.mutate({ model, quant }),
+        onEvictAll: (model) => evictMut.mutate({ model }),
+        promoting: evictMut.isPending,
       })),
       // Cold storage
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Cold (Array) — ${coldModels.length} models`
       }),
-      ...coldModels.map(m => jsx(ModelRow, {
+      ...coldModels.map(m => jsxs('div', {
         key: m.dir,
-        model: m,
-        isHot: false,
-        recentlyPromoted,
-        promoting: promoteMut.isPending,
-        onPromote: (dir) => promoteMut.mutate(dir),
-      })),
+        className: 'flex items-center justify-between gap-2 px-2 py-1 text-xs hover:bg-(--chrome-action-hover)',
+        children: [
+          jsxs('div', {
+            className: 'flex-1 truncate',
+            children: [
+              jsx('span', { className: 'font-medium', children: m.name }),
+              jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: m.size }),
+            ]
+          }),
+          jsx('button', {
+            className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400 ${promoting ? 'opacity-50 cursor-not-allowed' : ''}`,
+            onClick: () => !promoting && promoteMut.mutate(m.dir),
+            disabled: promoting,
+            children: promoting ? '...' : 'promote'
+          })
+        ]
+      }))
     ]
   })
 }
@@ -192,8 +223,9 @@ export default {
       id: 'pane',
       area: 'panes',
       title: 'model cache',
-      data: { placement: 'right', width: '320px' },
+      data: { placement: 'right', width: '360px' },
       render: () => jsx(ModelCachePane, { rest })
     })
   }
 }
+PYEOF
