@@ -4,7 +4,7 @@
 # part of the permanent library), then evicts models not accessed in 7 days.
 set -euo pipefail
 CACHE="/opt/data/plugins/model-cache/hot"
-LIB="/opt/data/plugins/model-cache"
+LIB="/opt/data/plugins/model-cache/cold"
 DAYS="${EVICT_DAYS:-7}"
 
 for d in "$CACHE"/models--*; do

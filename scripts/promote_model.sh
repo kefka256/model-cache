@@ -5,7 +5,7 @@ set -euo pipefail
 ORG="${1%%/*}"
 MODEL="${1##*/}"
 # Auto-detect storage paths (works on both gogo host and mounted container)
-LIB=/opt/data/plugins/model-cache
+LIB=/opt/data/plugins/model-cache/cold
 SRC="$LIB/models--${ORG}--${MODEL}"
 DST="/opt/data/plugins/model-cache/hot/models--${ORG}--${MODEL}"
 if [[ ! -d "$SRC" ]]; then
