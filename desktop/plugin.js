@@ -196,4 +196,20 @@ function ModelCachePane({ rest }) {
   })
 }
 
-export default ModelCachePane
+export default {
+  id: ID,
+  name: 'Model Cache Tier',
+  description: 'Promote/evict full models or specific quants from cold to hot storage.',
+
+  register(ctx) {
+    const rest = ctx.rest.bind(ctx)
+
+    ctx.register({
+      id: 'pane',
+      area: 'panes',
+      title: 'model cache',
+      data: { placement: 'right', width: '360px' },
+      render: () => jsx(ModelCachePane, { rest })
+    })
+  }
+}
