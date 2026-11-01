@@ -162,7 +162,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.11 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.12 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
@@ -211,7 +211,7 @@ function ModelCachePane({ rest }) {
             ]}),
             jsx('button', { type: 'button',
               className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
-              onClick: () => { console.log('evictAll', m.dir); evictMut.mutate({ model: m.dir }) },
+              'data-hermes-send': `Run this command and report result: rm -rf /opt/data/models/hot/hf/hub/${m.dir}`,
               children: 'evict all'
             })
           ]}),
@@ -248,7 +248,7 @@ function ModelCachePane({ rest }) {
             ]}),
             jsx('button', { type: 'button',
               className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400',
-              onClick: () => { console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
+              'data-hermes-send': `Run this command and report result: bash /opt/data/plugins/model-cache/scripts/promote_model.sh ${m.dir.replace(/^models--/, '').replace(/--/, '/')} all`,
               children: 'promote all'
             })
           ]}),
