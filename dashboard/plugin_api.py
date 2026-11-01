@@ -201,7 +201,7 @@ def _evict_quant(org: str, model_name: str, pattern: str) -> str:
     return f"WARN: no files matched '{pattern}'"
 
 
-@app.get("/status")
+@router.get("/status")
 def status():
     out = _local(f"ls {COLD} 2>/dev/null | wc -l || echo '0'")
     cold = int(out.strip() or 0)
