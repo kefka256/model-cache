@@ -1,5 +1,5 @@
 name: model-cache
-version: "0.1.20"
+version: "0.1.21"
 description: "Model cache tier manager — read-only status view. Promote/evict commands removed due to UI bugs."
 author: hermes
 kind: standalone

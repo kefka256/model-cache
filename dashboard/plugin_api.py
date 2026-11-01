@@ -7,8 +7,6 @@ from pydantic import BaseModel
 app = FastAPI()
 log = logging.getLogger(__name__)
 
-HASS = None
-
 HOT = "/opt/data/models/hot/hf/hub"
 COLD = "/opt/data/models/cold/hf/hub"
 
@@ -30,6 +28,18 @@ def _local(cmd: str, timeout: int = 30) -> str:
     except subprocess.TimeoutExpired as e:
         log.error(f"Command timed out: {cmd}")
         return e.stderr.strip() if e.stderr else ""
+
+def _local_promote(model: str, quant: Optional[str] = None) -> str:
+    if quant:
+        return _local(f"bash /opt/data/plugins/model-cache/scripts/promote_quant.sh '{model}' '{quant}'")
+    else:
+        return _local(f"bash /opt/data/plugins/model-cache/scripts/promote_model.sh '{model}'")
+
+def _local_evict(model: str, quant: Optional[str] = None) -> str:
+    if quant:
+        return _local(f"bash /opt/data/plugins/model-cache/scripts/evict_models.sh '{model}' '{quant}'")
+    else:
+        return _local(f"bash /opt/data/plugins/model-cache/scripts/evict_models.sh '{model}'")
 
 @app.get("/status")
 def status():
@@ -87,8 +97,10 @@ class PromoteBody(BaseModel):
 
 @app.post("/promote")
 def promote(body: PromoteBody):
-    return JSONResponse({"ok": False, "output": "Promote removed due to UI bugs"}, status=405)
+    out = _local_promote(body.model, body.quant)
+    return JSONResponse({"ok": True, "output": out})
 
 @app.post("/evict")
 def evict(body: PromoteBody):
-    return JSONResponse({"ok": False, "output": "Evict removed due to UI bugs"}, status=405)
+    out = _local_evict(body.model, body.quant)
+    return JSONResponse({"ok": True, "output": out})

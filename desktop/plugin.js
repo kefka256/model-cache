@@ -113,7 +113,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.20 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.21 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
