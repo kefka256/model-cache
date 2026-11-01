@@ -249,7 +249,7 @@ function ModelCachePane({ rest }) {
             ]}),
             jsx('button', {
               className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400',
-              onClick: () => { console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
+              onClick: () => { alert('promoteAll clicked: ' + m.dir); console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
               disabled: promoting,
               children: promoting ? '...' : 'promote all'
             })
