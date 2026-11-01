@@ -208,8 +208,8 @@ def status():
     cold = int(out.strip() or 0)
     out = _local(f"ls {HOT} 2>/dev/null | wc -l || echo '0'")
     hot = int(out.strip() or 0)
-    free = _local(f"du -sh /opt/data/models 2>/dev/null | cut -f1 || echo '?'")
-    pct = _local(r"df -h /opt/data/models 2>/dev/null | awk 'NR==2 {print \$5}' || echo '?'")
+    free = _local(f"du -sh {HOT} 2>/dev/null | cut -f1 || echo '?'")
+    pct = _local(rf"df -h {HOT} 2>/dev/null | awk 'NR==2 {{print \$5}}' || echo '?'")
     return JSONResponse({
         "cold_size": f"{cold} models",
         "hot_size": f"{hot} models",
