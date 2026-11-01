@@ -1,6 +1,6 @@
 import { cn, host, useQuery, useMutation, useQueryClient } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const ID = 'model-cache'
 
@@ -72,20 +72,24 @@ function ModelCachePane({ rest }) {
   const [coldModels, setColdModels] = useState([])
   const [hotModels, setHotModels] = useState([])
 
+  const restRef = useRef(rest)
+  useEffect(() => { restRef.current = rest }, [rest])
+
   const fetchAll = useCallback(async () => {
+    const r = restRef.current
     try {
-      const s = await rest('/status', { method: 'GET' })
+      const s = await r('/status', { method: 'GET' })
       setStatusData(s || {})
     } catch(e) {}
     try {
-      const c = await rest('/cold', { method: 'GET' })
+      const c = await r('/cold', { method: 'GET' })
       setColdModels((c && c.models) ? c.models : [])
     } catch(e) {}
     try {
-      const h = await rest('/hot', { method: 'GET' })
+      const h = await r('/hot', { method: 'GET' })
       setHotModels((h && h.models) ? h.models : [])
     } catch(e) {}
-  }, [rest])
+  }, [])
 
   useEffect(() => {
     fetchAll()
