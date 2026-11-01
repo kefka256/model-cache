@@ -120,10 +120,13 @@ class PromoteBody(BaseModel):
 @router.post("/promote")
 def promote(payload: PromoteBody):
     """Promote a model (or specific quant) from cold to hot."""
+    model = payload.model
+    if model.startswith("models--"):
+        model = model[len("models--"):].replace("--", "/", 1).replace("--", "-")
     if payload.quant:
-        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_quant.sh '{payload.model}' '{payload.quant}'"
+        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_quant.sh '{model}' '{payload.quant}'"
     else:
-        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_model.sh '{payload.model}'"
+        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_model.sh '{model}'"
     out = _local(cmd, timeout=1800)
     return {"ok": True, "output": out}
 
