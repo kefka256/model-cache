@@ -12,7 +12,6 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
   return jsxs('div', {
     className: 'border-b border-(--ui-border-subtle)',
     children: [
-      // Model head row
       jsxs('div', {
         className: 'flex items-center justify-between gap-2 px-2 py-1.5 text-xs hover:bg-(--chrome-action-hover)',
         children: [
@@ -34,7 +33,6 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
           })
         ]
       }),
-      // Quants (collapsible)
       expanded ? jsxs('div', {
         className: 'pl-6 pb-1',
         children: quants.length > 0
@@ -64,7 +62,6 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
 }
 
 function ModelCachePane({ rest }) {
-  // Stabilize rest function reference to prevent unnecessary re-renders
   const stableRest = useMemo(() => rest, [rest])
   const qc = useQueryClient()
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
@@ -79,7 +76,6 @@ function ModelCachePane({ rest }) {
   const fetchAll = useCallback(async () => {
     if (fetchingRef.current) return
     fetchingRef.current = true
-    // Clear view before refresh to avoid stale/duplicate accumulation
     setStatusData({})
     setColdModels([])
     setHotModels([])
@@ -132,13 +128,11 @@ function ModelCachePane({ rest }) {
     setTimeout(() => setRefreshing(false), 800)
   }
 
-  // statusData, coldModels, hotModels are now state variables
   const promoting = evictMut.isPending || promoteMut.isPending
 
   return jsxs('div', {
     className: 'flex h-full flex-col gap-2 p-3 text-sm overflow-auto',
     children: [
-      // Status bar with refresh button
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
@@ -157,7 +151,6 @@ function ModelCachePane({ rest }) {
           }),
         ]
       }),
-      // Promote status / progress
       promoteMut.isPending ? jsxs('div', {
         className: 'text-xs text-(--ui-text-tertiary) mt-1 px-2 flex items-center gap-1',
         children: [
@@ -168,12 +161,10 @@ function ModelCachePane({ rest }) {
         className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
         children: promoteMut.data.output || ''
       }) : null,
-      // Evict status
       evictMut.data ? jsx('div', {
         className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
         children: evictMut.data.output || ''
       }) : null,
-      // Hot cache
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Hot (NVMe) — ${hotModels.length} models`
@@ -185,7 +176,6 @@ function ModelCachePane({ rest }) {
         onEvictAll: (model) => evictMut.mutate({ model }),
         promoting: evictMut.isPending,
       })),
-      // Cold storage
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Cold (Array) — ${coldModels.length} models`
