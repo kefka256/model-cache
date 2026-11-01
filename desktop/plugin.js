@@ -26,7 +26,7 @@ function ModelGroup({ model, action, onActionQuant, onActionAll, promoting }) {
               jsx('span', { className: 'ml-2 text-(--ui-text-quaternary) text-[10px]', children: `(${quants.length} quant${quants.length !== 1 ? 's' : ''})` }),
             ]
           }),
-          jsx('button', {
+          jsx('button', { type: 'button',
             className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) ${isPromote ? 'hover:text-green-400' : 'hover:text-red-400'}`,
             onClick: () => { console.log('actionAll', model.dir); onActionAll(model.dir) },
             disabled: promoting,
@@ -48,7 +48,7 @@ function ModelGroup({ model, action, onActionQuant, onActionAll, promoting }) {
                     jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: quantSizes[q] || '' }),
                   ]
                 }),
-                jsx('button', {
+                jsx('button', { type: 'button',
                   className: `px-1.5 py-0.5 rounded text-(--ui-text-quaternary) ${isPromote ? 'hover:text-green-400' : 'hover:text-red-400'} text-[10px]`,
                   onClick: () => { console.log('actionQuant', model.dir, q); onActionQuant(model.dir, q) },
                   disabled: promoting,
@@ -162,12 +162,12 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.10 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.11 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
               jsx('span', { children: `Free: ${statusData.cache_free || '?'} (${statusData.cache_pct || '?'})` }),
-              jsx('button', {
+              jsx('button', { type: 'button',
                 className: `w-5 h-5 flex items-center justify-center rounded-full text-(--ui-text-tertiary) hover:text-(--ui-text-primary) border border-(--ui-stroke-secondary) text-[12px] leading-none ${refreshing ? 'animate-spin' : ''}`,
                 onClick: handleRefresh,
                 disabled: refreshing,
@@ -209,7 +209,7 @@ function ModelCachePane({ rest }) {
               jsx('span', { className: 'font-medium', children: m.name }),
               jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: m.size }),
             ]}),
-            jsx('button', {
+            jsx('button', { type: 'button',
               className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
               onClick: () => { console.log('evictAll', m.dir); evictMut.mutate({ model: m.dir }) },
               children: 'evict all'
@@ -223,7 +223,7 @@ function ModelCachePane({ rest }) {
                 jsx('span', { children: q }),
                 jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: (m.quant_sizes||{})[q] || '' }),
               ]}),
-              jsx('button', {
+              jsx('button', { type: 'button',
                 className: 'px-1.5 py-0.5 rounded text-(--ui-text-quaternary) hover:text-red-400 text-[10px]',
                 onClick: () => { console.log('evictQuant', m.dir, q); evictMut.mutate({ model: m.dir, quant: q }) },
                 disabled: promoting,
@@ -246,9 +246,9 @@ function ModelCachePane({ rest }) {
               jsx('span', { className: 'font-medium', children: m.name }),
               jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: m.size }),
             ]}),
-            jsx('button', {
+            jsx('button', { type: 'button',
               className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400',
-              onPointerDown: () => { console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
+              onClick: () => { console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
               children: 'promote all'
             })
           ]}),
@@ -260,7 +260,7 @@ function ModelCachePane({ rest }) {
                 jsx('span', { children: q }),
                 jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: (m.quant_sizes||{})[q] || '' }),
               ]}),
-              jsx('button', {
+              jsx('button', { type: 'button',
                 className: 'px-1.5 py-0.5 rounded text-(--ui-text-quaternary) hover:text-green-400 text-[10px]',
                 onClick: () => { console.log('promoteQuant', m.dir, q); promoteMut.mutate({ model: m.dir, quant: q }) },
                 disabled: promoting,
