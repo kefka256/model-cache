@@ -1,6 +1,6 @@
 import { cn, host, useQuery, useMutation, useQueryClient } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 
 const ID = 'model-cache'
 

@@ -17,8 +17,8 @@ from pydantic import BaseModel
 router = APIRouter()
 
 GOGO = "root@192.168.0.11"
-COLD = "/mnt/gogo/AI/models/hf/hub"
-HOT = "/opt/data/plugins/model-cache/hot/hub"
+COLD = "/opt/data/models/cold/hf/hub"
+HOT = "/opt/data/models/hot/hf/hub"
 
 
 def _local(cmd: str, timeout: int = 30) -> str:
@@ -40,7 +40,7 @@ def get_status():
     """Cache and array space usage."""
     cold_du = _local(f"du -sh {COLD} 2>/dev/null | cut -f1")
     hot_du = _local(f"du -sh {HOT} 2>/dev/null | cut -f1")
-    cache_df = _local("df -B1 /opt/data/plugins/model-cache/hot/hub | tail -1")
+    cache_df = _local("df -B1 /opt/data/models/hot/hf/hub | tail -1")
     parts = cache_df.split()
     def _h(b):
         b = int(b)

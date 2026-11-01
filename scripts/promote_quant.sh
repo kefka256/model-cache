@@ -5,9 +5,9 @@ set -euo pipefail
 ORG="${1%%/*}"
 MODEL="${1##*/}"
 PATTERN="${2:-}"
-LIB=/opt/data/plugins/model-cache/cold/hub
+LIB=/opt/data/models/cold/hf/hub
 SRC="$LIB/models--${ORG}--${MODEL}"
-DST="/opt/data/plugins/model-cache/hot/hub/models--${ORG}--${MODEL}"
+DST="/opt/data/models/hot/hf/hub/models--${ORG}--${MODEL}"
 [[ -d "$SRC" ]] || { echo "ERROR: $SRC not found"; exit 1; }
 mkdir -p "$DST/blobs" "$DST/snapshots" "$DST/refs"
 
