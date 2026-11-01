@@ -1,6 +1,6 @@
 import { cn, host, useQuery, useMutation, useQueryClient } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const ID = 'model-cache'
 
@@ -68,32 +68,37 @@ function ModelCachePane({ rest }) {
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
   const [refreshing, setRefreshing] = useState(false)
 
-  const status = useQuery({
-    queryKey: ['mc-status'],
-    queryFn: () => rest('/status', { method: 'GET' }),
-    refetchInterval: 10000,
-  })
+  const [statusData, setStatusData] = useState({})
+  const [coldModels, setColdModels] = useState([])
+  const [hotModels, setHotModels] = useState([])
 
-  const cold = useQuery({
-    queryKey: ['mc-cold'],
-    queryFn: () => rest('/cold', { method: 'GET' }),
-    refetchInterval: 30000,
-  })
+  const fetchAll = useCallback(async () => {
+    try {
+      const s = await rest('/status', { method: 'GET' })
+      setStatusData(s || {})
+    } catch(e) {}
+    try {
+      const c = await rest('/cold', { method: 'GET' })
+      setColdModels((c && c.models) ? c.models : [])
+    } catch(e) {}
+    try {
+      const h = await rest('/hot', { method: 'GET' })
+      setHotModels((h && h.models) ? h.models : [])
+    } catch(e) {}
+  }, [rest])
 
-  const hot = useQuery({
-    queryKey: ['mc-hot'],
-    queryFn: () => rest('/hot', { method: 'GET' }),
-    refetchInterval: 30000,
-  })
+  useEffect(() => {
+    fetchAll()
+    const iv = setInterval(fetchAll, 15000)
+    return () => clearInterval(iv)
+  }, [fetchAll])
 
   const promoteMut = useMutation({
     mutationFn: (dir) => rest('/promote', { method: 'POST', body: { model: dir } }),
     onSuccess: (data, dir) => {
       if (data && data.ok) {
         setRecentlyPromoted(prev => new Set([...prev, dir]))
-        qc.refetchQueries({ queryKey: ['mc-hot'] })
-        qc.refetchQueries({ queryKey: ['mc-cold'] })
-        qc.refetchQueries({ queryKey: ['mc-status'] })
+        fetchAll()
       }
     },
   })
@@ -102,9 +107,7 @@ function ModelCachePane({ rest }) {
     mutationFn: ({ model, quant }) => rest('/evict', { method: 'POST', body: { model, quant } }),
     onSuccess: (data) => {
       if (data && data.ok) {
-        qc.refetchQueries({ queryKey: ['mc-hot'] })
-        qc.refetchQueries({ queryKey: ['mc-cold'] })
-        qc.refetchQueries({ queryKey: ['mc-status'] })
+        fetchAll()
       }
     },
     onError: (err) => {
@@ -116,17 +119,11 @@ function ModelCachePane({ rest }) {
     setRefreshing(true)
     promoteMut.reset()
     evictMut.reset()
-    await Promise.all([
-      qc.refetchQueries({ queryKey: ['mc-status'] }),
-      qc.refetchQueries({ queryKey: ['mc-cold'] }),
-      qc.refetchQueries({ queryKey: ['mc-hot'] }),
-    ])
+    await fetchAll()
     setTimeout(() => setRefreshing(false), 800)
   }
 
-  const statusData = status.data || {}
-  const coldModels = cold.data?.models || []
-  const hotModels = hot.data?.models || []
+  // statusData, coldModels, hotModels are now state variables
   const promoting = evictMut.isPending || promoteMut.isPending
 
   return jsxs('div', {
