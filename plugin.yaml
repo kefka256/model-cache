@@ -1,6 +1,6 @@
 name: model-cache
-version: "0.1.21"
-description: "Model cache tier manager — read-only status view. Promote/evict commands removed due to UI bugs."
+version: "0.1.22"
+description: "Model cache tier manager — promote/evict full models or specific quants from cold to hot storage."
 author: hermes
 kind: standalone
 api: plugin_api.py

@@ -1,14 +1,48 @@
-import { useMutation, useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useQueryClient } from '@hermes/plugin-sdk'
 
 const ID = 'model-cache'
 
-function ModelGroup({ model, action }) {
+function ModelGroup({ model, action, rest }) {
   const isPromote = action === 'promote'
   const [expanded, setExpanded] = useState(false)
+  const [loading, setLoading] = useState(false)
   const quants = model.quants || []
   const quantSizes = model.quant_sizes || {}
+
+  const doPromote = async (quant?: string) => {
+    setLoading(true)
+    try {
+      await rest('/promote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model.dir,
+          action: 'promote',
+          quant
+        })
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const doEvict = async (quant?: string) => {
+    setLoading(true)
+    try {
+      await rest('/evict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model.dir,
+          action: 'evict',
+          quant
+        })
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return jsxs('div', {
     className: 'border-b border-(--ui-border-subtle)',
@@ -26,6 +60,18 @@ function ModelGroup({ model, action }) {
               jsx('span', { className: 'ml-2 text-(--ui-text-quaternary) text-[10px]', children: `(${quants.length} quant${quants.length !== 1 ? 's' : ''})` }),
             ]
           }),
+          jsxs('div', {
+            className: 'flex items-center gap-1',
+            children: [
+              jsx('button', {
+                type: 'button',
+                className: 'px-2 py-0.5 text-[10px] rounded bg-(--accent) text-(--accent-foreground) hover:opacity-80 disabled:opacity-50',
+                disabled: loading,
+                onClick: () => (isPromote ? doPromote() : doEvict()),
+                children: loading ? '…' : (isPromote ? 'Promote All' : 'Evict All')
+              }),
+            ]
+          })
         ]
       }),
       expanded ? jsxs('div', {
@@ -41,6 +87,13 @@ function ModelGroup({ model, action }) {
                     jsx('span', { children: q }),
                     jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: quantSizes[q] || '' }),
                   ]
+                }),
+                jsx('button', {
+                  type: 'button',
+                  className: 'px-2 py-0.5 text-[10px] rounded bg-(--accent) text-(--accent-foreground) hover:opacity-80 disabled:opacity-50',
+                  disabled: loading,
+                  onClick: () => (isPromote ? doPromote(q) : doEvict(q)),
+                  children: loading ? '…' : (isPromote ? `Promote ${q}` : `Evict ${q}`)
                 }),
               ]
             }))
@@ -113,7 +166,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.21 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.22 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
@@ -133,12 +186,12 @@ function ModelCachePane({ rest }) {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Cold (Array) — ${coldModels.length} models`
       }),
-      coldModels.map(m => jsx(ModelGroup, { key: m.dir, model: m, action: 'promote' }, null)),
+      coldModels.map(m => jsx(ModelGroup, { key: m.dir, model: m, action: 'promote', rest: restRef.current }, null)),
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Hot (NVMe) — ${hotModels.length} models`
       }),
-      hotModels.map(m => jsx(ModelGroup, { key: m.dir, model: m, action: 'evict' }, null)),
+      hotModels.map(m => jsx(ModelGroup, { key: m.dir, model: m, action: 'evict', rest: restRef.current }, null)),
     ]
   })
 }
