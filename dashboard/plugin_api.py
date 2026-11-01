@@ -61,22 +61,27 @@ def get_status():
 @router.get("/cold")
 def list_cold():
     """List models in cold storage (array)."""
-    out = _local(f"ls {COLD} | grep '^models--'")
+    out = _local(f"ls {COLD} | grep '^models--' || echo ''")
     models = []
     for line in out.splitlines():
         line = line.strip()
         if not line:
             continue
         name = line[len("models--"):].replace("--", "/", 1).replace("--", "-")
-        # Get size
         size = _local(f"du -sh {COLD}/{line} 2>/dev/null | cut -f1")
-        # Find gguf files
         ggufs = _local(f"find {COLD}/{line} -name '*.gguf' 2>/dev/null | sed 's|.*/||'")
+        quants = [g for g in ggufs.splitlines() if g.strip()]
+        quant_sizes = {}
+        for q in quants:
+            qpath = _local(f"find {COLD}/{line} -name '{q}' 2>/dev/null | head -1")
+            if qpath:
+                quant_sizes[q] = _local(f"du -sh '{qpath}' 2>/dev/null | cut -f1")
         models.append({
             "dir": line,
             "name": name,
             "size": size,
-            "ggufs": [g for g in ggufs.splitlines() if g.strip()],
+            "quants": quants,
+            "quant_sizes": quant_sizes,
         })
     return {"models": models}
 
