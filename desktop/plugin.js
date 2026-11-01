@@ -72,30 +72,23 @@ function ModelCachePane({ rest }) {
   const [coldModels, setColdModels] = useState([])
   const [hotModels, setHotModels] = useState([])
 
-  const restRef = useRef(rest)
-  useEffect(() => { restRef.current = rest }, [rest])
 
   const fetchAll = useCallback(async () => {
-    const r = restRef.current
     try {
-      const s = await r('/status', { method: 'GET' })
+      const s = await rest('/status', { method: 'GET' })
       setStatusData(s || {})
     } catch(e) {}
     try {
-      const c = await r('/cold', { method: 'GET' })
+      const c = await rest('/cold', { method: 'GET' })
       setColdModels((c && c.models) ? c.models : [])
     } catch(e) {}
     try {
-      const h = await r('/hot', { method: 'GET' })
+      const h = await rest('/hot', { method: 'GET' })
       setHotModels((h && h.models) ? h.models : [])
     } catch(e) {}
-  }, [])
+  }, [rest])
 
-  useEffect(() => {
-    fetchAll()
-    const iv = setInterval(fetchAll, 15000)
-    return () => clearInterval(iv)
-  }, [fetchAll])
+  useEffect(() => { fetchAll() }, [])
 
   const promoteMut = useMutation({
     mutationFn: (dir) => rest('/promote', { method: 'POST', body: { model: dir } }),
