@@ -1,5 +1,5 @@
 name: model-cache
-version: "0.1.0"
+version: "0.1.1"
 description: "Model cache tier manager — promote models from array (cold) to NVMe (hot), evict stale ones. Manages the hotlist and shows space usage."
 author: hermes
 kind: standalone
