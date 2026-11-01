@@ -1,4 +1,4 @@
-import { cn, host, useQuery, useMutation, useQueryClient } from '@hermes/plugin-sdk'
+import { cn, host, useMutation } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 
@@ -63,7 +63,6 @@ function ModelGroup({ model, action, onActionQuant, onActionAll, promoting }) {
 }
 
 function ModelCachePane({ rest }) {
-  const qc = useQueryClient()
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
   const [refreshing, setRefreshing] = useState(false)
   const fetchingRef = useRef(false)
@@ -161,7 +160,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.17 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.18 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
