@@ -129,7 +129,6 @@ function ModelCachePane({ rest }) {
     onSuccess: (data, dir) => {
       if (data && data.ok) {
         setRecentlyPromoted(prev => new Set([...prev, dir]))
-        setTimeout(() => fetchAll(), 2000)
       }
     },
   })
@@ -138,7 +137,7 @@ function ModelCachePane({ rest }) {
     mutationFn: ({ model, quant }) => restRef.current('/evict', { method: 'POST', body: { model, quant } }),
     onSuccess: (data) => {
       if (data && data.ok) {
-        setTimeout(() => fetchAll(), 2000)
+        // no-op; user refreshes to see updated list
       }
     },
     onError: (err) => {
@@ -162,7 +161,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.16 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.17 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
