@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 
 const ID = 'model-cache'
 
-function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
+function ModelGroup({ model, action, onActionQuant, onActionAll, promoting }) {
+  const isPromote = action === 'promote' 
   const [expanded, setExpanded] = useState(false)
   const quants = model.quants || []
   const quantSizes = model.quant_sizes || {}
@@ -26,10 +27,10 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
             ]
           }),
           jsx('button', {
-            className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
-            onClick: () => onEvictAll(model.dir),
+            className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) ${isPromote ? 'hover:text-green-400' : 'hover:text-red-400'}`,
+            onClick: () => onActionAll(model.dir),
             disabled: promoting,
-            children: promoting ? '...' : 'evict all'
+            children: promoting ? '...' : (isPromote ? 'promote all' : 'evict all')
           })
         ]
       }),
@@ -48,10 +49,10 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
                   ]
                 }),
                 jsx('button', {
-                  className: 'px-1.5 py-0.5 rounded text-(--ui-text-quaternary) hover:text-red-400 text-[10px]',
-                  onClick: () => onEvictQuant(model.dir, q),
+                  className: `px-1.5 py-0.5 rounded text-(--ui-text-quaternary) ${isPromote ? 'hover:text-green-400' : 'hover:text-red-400'} text-[10px]`,
+                  onClick: () => onActionQuant(model.dir, q),
                   disabled: promoting,
-                  children: 'evict'
+                  children: isPromote ? 'promote' : 'evict'
                 })
               ]
             }))
@@ -89,9 +90,15 @@ function ModelCachePane({ rest }) {
 
       const coldList = (c && c.models) ? c.models : []
       const hotList = (h && h.models) ? h.models : []
+      // Normalize cold shape to match hot (quants + quant_sizes)
+      const normalizedCold = coldList.map(m => ({
+        ...m,
+        quants: m.quants || m.ggufs || [],
+        quant_sizes: m.quant_sizes || {},
+      }))
 
       const uniqueCold = Array.from(
-        new Map(coldList.filter(m => m && m.dir).map(m => [m.dir, m])).values()
+        new Map(normalizedCold.filter(m => m && m.dir).map(m => [m.dir, m])).values()
       )
       const uniqueHot = Array.from(
         new Map(hotList.filter(m => m && m.dir).map(m => [m.dir, m])).values()
@@ -112,7 +119,10 @@ function ModelCachePane({ rest }) {
   }, [fetchAll])
 
   const promoteMut = useMutation({
-    mutationFn: (dir) => restRef.current('/promote', { method: 'POST', body: { model: dir } }),
+    mutationFn: (arg) => {
+      const { model, quant } = (typeof arg === 'string') ? { model: arg } : arg
+      return restRef.current('/promote', { method: 'POST', body: { model, quant } })
+    },
     onSuccess: (data, dir) => {
       if (data && data.ok) {
         setRecentlyPromoted(prev => new Set([...prev, dir]))
@@ -185,32 +195,22 @@ function ModelCachePane({ rest }) {
       ...hotModels.map(m => jsx(ModelGroup, {
         key: m.dir,
         model: m,
-        onEvictQuant: (model, quant) => evictMut.mutate({ model, quant }),
-        onEvictAll: (model) => evictMut.mutate({ model }),
-        promoting: evictMut.isPending,
+        action: 'evict',
+        onActionQuant: (model, quant) => evictMut.mutate({ model, quant }),
+        onActionAll: (model) => evictMut.mutate({ model }),
+        promoting: promoting,
       })),
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Cold (Array) — ${coldModels.length} models`
       }),
-      ...coldModels.map(m => jsxs('div', {
+      ...coldModels.map(m => jsx(ModelGroup, {
         key: m.dir,
-        className: 'flex items-center justify-between gap-2 px-2 py-1 text-xs hover:bg-(--chrome-action-hover)',
-        children: [
-          jsxs('div', {
-            className: 'flex-1 truncate',
-            children: [
-              jsx('span', { className: 'font-medium', children: m.name }),
-              jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: m.size }),
-            ]
-          }),
-          jsx('button', {
-            className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400 ${promoting ? 'opacity-50 cursor-not-allowed' : ''}`,
-            onClick: () => !promoting && promoteMut.mutate(m.dir),
-            disabled: promoting,
-            children: promoting ? '...' : 'promote'
-          })
-        ]
+        model: m,
+        action: 'promote',
+        onActionQuant: (model, quant) => promoteMut.mutate({ model, quant }),
+        onActionAll: (model) => promoteMut.mutate({ model }),
+        promoting: promoting,
       }))
     ]
   })
