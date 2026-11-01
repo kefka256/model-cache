@@ -2,12 +2,12 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-app = FastAPI()
 log = logging.getLogger(__name__)
+router = APIRouter()
 
 HOT = "/opt/data/models/hot/hf/hub"
 COLD = "/opt/data/models/cold/hf/hub"
@@ -217,7 +217,7 @@ def status():
     })
 
 
-@app.get("/cold")
+@router.get("/cold")
 def cold():
     out = _local(f"ls {COLD} 2>/dev/null | grep '^models--' || echo ''")
     models = []
@@ -231,7 +231,7 @@ def cold():
     return JSONResponse({"models": models})
 
 
-@app.get("/hot")
+@router.get("/hot")
 def hot():
     out = _local(f"ls {HOT} 2>/dev/null | grep '^models--' || echo ''")
     models = []
@@ -254,7 +254,7 @@ def hot():
     return JSONResponse({"models": models})
 
 
-@app.post("/promote")
+@router.post("/promote")
 def promote(body: PromoteBody):
     try:
         org, model_name = _parse_model_id(body.model)
@@ -268,7 +268,7 @@ def promote(body: PromoteBody):
     return JSONResponse({"ok": True, "output": out})
 
 
-@app.post("/evict")
+@router.post("/evict")
 def evict(body: EvictBody):
     try:
         org, model_name = _parse_model_id(body.model)
