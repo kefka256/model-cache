@@ -69,13 +69,13 @@ def list_cold():
             continue
         name = line[len("models--"):].replace("--", "/", 1).replace("--", "-")
         size = _local(f"du -sh {COLD}/{line} 2>/dev/null | cut -f1")
-        ggufs = _local(f"find {COLD}/{line} -name '*.gguf' 2>/dev/null | sed 's|.*/||'")
+        ggufs = _local(f"find {COLD}/{line} -name '*.gguf' 2>/dev/null | sed 's|.*/||' | sort -u")
         quants = [g for g in ggufs.splitlines() if g.strip()]
         quant_sizes = {}
         for q in quants:
             qpath = _local(f"find {COLD}/{line} -name '{q}' 2>/dev/null | head -1")
             if qpath:
-                quant_sizes[q] = _local(f"du -sh '{qpath}' 2>/dev/null | cut -f1")
+                quant_sizes[q] = _local(f"du -shL '{qpath}' 2>/dev/null | cut -f1")
         models.append({
             "dir": line,
             "name": name,
@@ -105,7 +105,7 @@ def list_hot():
         for q in quants:
             qpath = _local(f"find {HOT}/{line}/snapshots -name '{q}' 2>/dev/null | head -1")
             if qpath:
-                quant_sizes[q] = _local(f"du -sh '{qpath}' 2>/dev/null | cut -f1")
+                quant_sizes[q] = _local(f"du -shL '{qpath}' 2>/dev/null | cut -f1")
             else:
                 quant_sizes[q] = "?"
         models.append({"dir": line, "name": name, "size": size, "quants": quants, "quant_sizes": quant_sizes})
