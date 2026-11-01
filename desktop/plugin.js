@@ -162,7 +162,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.8 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
@@ -249,7 +249,7 @@ function ModelCachePane({ rest }) {
             ]}),
             jsx('button', {
               className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400',
-              onClick: () => { alert('promoteAll clicked: ' + m.dir); console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
+              onClick: () => { console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
               disabled: promoting,
               children: promoting ? '...' : 'promote all'
             })
