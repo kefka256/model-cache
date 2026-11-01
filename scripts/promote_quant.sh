@@ -20,7 +20,7 @@ while IFS= read -r -d '' snap; do
   mkdir -p "$DST/snapshots/$(dirname "$rel")"
   ln -sfn "../../blobs/$blobname" "$DST/snapshots/$rel"
   if [[ -f "$target" && ! -f "$DST/blobs/$blobname" ]]; then
-    rsync -a --progress "$target" "$DST/blobs/$blobname"
+    cp -a "$target" "$DST/blobs/$blobname"
     echo "  copied blob $blobname"
   fi
 done < <(find "$SRC/snapshots" \( -type f -o -type l \) 2>/dev/null | grep -i "$PATTERN" | tr '\n' '\0')

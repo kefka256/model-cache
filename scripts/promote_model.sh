@@ -12,5 +12,5 @@ if [[ ! -d "$SRC" ]]; then
   echo "ERROR: not found on array: $SRC" >&2; exit 1
 fi
 mkdir -p /opt/data/models/hot/hf/hub
-rsync -a --progress "$SRC/" "$DST/"
+cp -a "$SRC/." "$DST/"
 echo "Promoted: $ORG/$MODEL -> NVMe cache"
