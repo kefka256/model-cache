@@ -200,25 +200,77 @@ function ModelCachePane({ rest }) {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Hot (NVMe) — ${hotModels.length} models`
       }),
-      ...hotModels.map(m => jsx(ModelGroup, {
+      ...hotModels.map(m => jsxs('div', {
         key: `hot-${m.dir}`,
-        model: m,
-        action: 'evict',
-        onActionQuant: (model, quant) => evictMut.mutate({ model, quant }),
-        onActionAll: (model) => evictMut.mutate({ model }),
-        promoting: promoting,
+        className: 'border-b border-(--ui-border-subtle) px-2 py-1.5 text-xs',
+        children: [
+          jsxs('div', { className: 'flex items-center justify-between gap-2', children: [
+            jsxs('div', { className: 'flex-1 truncate', children: [
+              jsx('span', { className: 'font-medium', children: m.name }),
+              jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: m.size }),
+            ]}),
+            jsx('button', {
+              className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-red-400',
+              onClick: () => { console.log('evictAll', m.dir); evictMut.mutate({ model: m.dir }) },
+              disabled: promoting,
+              children: promoting ? '...' : 'evict all'
+            })
+          ]}),
+          ...(m.quants || []).map(q => jsxs('div', {
+            key: q,
+            className: 'flex items-center justify-between gap-2 pl-4 py-0.5 text-[11px]',
+            children: [
+              jsxs('div', { className: 'flex-1 truncate', children: [
+                jsx('span', { children: q }),
+                jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: (m.quant_sizes||{})[q] || '' }),
+              ]}),
+              jsx('button', {
+                className: 'px-1.5 py-0.5 rounded text-(--ui-text-quaternary) hover:text-red-400 text-[10px]',
+                onClick: () => { console.log('evictQuant', m.dir, q); evictMut.mutate({ model: m.dir, quant: q }) },
+                disabled: promoting,
+                children: 'evict'
+              })
+            ]
+          }))
+        ]
       })),
       jsx('div', {
         className: 'text-xs font-medium text-(--ui-text-secondary) mt-2',
         children: `Cold (Array) — ${coldModels.length} models`
       }),
-      ...coldModels.map(m => jsx(ModelGroup, {
+      ...coldModels.map(m => jsxs('div', {
         key: `cold-${m.dir}`,
-        model: m,
-        action: 'promote',
-        onActionQuant: (model, quant) => promoteMut.mutate({ model, quant }),
-        onActionAll: (model) => promoteMut.mutate({ model }),
-        promoting: promoting,
+        className: 'border-b border-(--ui-border-subtle) px-2 py-1.5 text-xs',
+        children: [
+          jsxs('div', { className: 'flex items-center justify-between gap-2', children: [
+            jsxs('div', { className: 'flex-1 truncate', children: [
+              jsx('span', { className: 'font-medium', children: m.name }),
+              jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: m.size }),
+            ]}),
+            jsx('button', {
+              className: 'px-2 py-0.5 rounded text-(--ui-text-tertiary) hover:text-green-400',
+              onClick: () => { console.log('promoteAll', m.dir); promoteMut.mutate({ model: m.dir }) },
+              disabled: promoting,
+              children: promoting ? '...' : 'promote all'
+            })
+          ]}),
+          ...(m.quants || []).map(q => jsxs('div', {
+            key: q,
+            className: 'flex items-center justify-between gap-2 pl-4 py-0.5 text-[11px]',
+            children: [
+              jsxs('div', { className: 'flex-1 truncate', children: [
+                jsx('span', { children: q }),
+                jsx('span', { className: 'ml-2 text-(--ui-text-quaternary)', children: (m.quant_sizes||{})[q] || '' }),
+              ]}),
+              jsx('button', {
+                className: 'px-1.5 py-0.5 rounded text-(--ui-text-quaternary) hover:text-green-400 text-[10px]',
+                onClick: () => { console.log('promoteQuant', m.dir, q); promoteMut.mutate({ model: m.dir, quant: q }) },
+                disabled: promoting,
+                children: 'promote'
+              })
+            ]
+          }))
+        ]
       }))
     ]
   })
