@@ -40,14 +40,20 @@ def get_status():
     """Cache and array space usage."""
     cold_du = _local(f"du -sh {COLD} 2>/dev/null | cut -f1")
     hot_du = _local(f"du -sh {HOT} 2>/dev/null | cut -f1")
-    cache_df = _local("df -h /opt/data/plugins/model-cache/hot/hub | tail -1")
+    cache_df = _local("df -B1 /opt/data/plugins/model-cache/hot/hub | tail -1")
     parts = cache_df.split()
+    def _h(b):
+        b = int(b)
+        for u in ["B","K","M","G","T"]:
+            if b < 1024: return f"{b:.1f}{u}"
+            b /= 1024
+        return f"{b:.1f}P"
     return {
         "cold_size": cold_du,
         "hot_size": hot_du,
-        "cache_total": parts[1] if len(parts) > 1 else "?",
-        "cache_used": parts[2] if len(parts) > 2 else "?",
-        "cache_free": parts[3] if len(parts) > 3 else "?",
+        "cache_total": _h(parts[1]) if len(parts) > 1 else "?",
+        "cache_used": _h(parts[2]) if len(parts) > 2 else "?",
+        "cache_free": _h(parts[3]) if len(parts) > 3 else "?",
         "cache_pct": parts[4] if len(parts) > 4 else "?",
     }
 
