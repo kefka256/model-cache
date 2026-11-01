@@ -195,3 +195,5 @@ function ModelCachePane({ rest }) {
     ]
   })
 }
+
+export default ModelCachePane
