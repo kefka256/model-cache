@@ -1,6 +1,6 @@
 name: model-cache
-version: "0.1.19"
-description: "Model cache tier manager — promote models from array (cold) to NVMe (hot), evict stale ones. Manages the hotlist and shows space usage."
+version: "0.1.20"
+description: "Model cache tier manager — read-only status view. Promote/evict commands removed due to UI bugs."
 author: hermes
 kind: standalone
 api: plugin_api.py

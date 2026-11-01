@@ -1,70 +1,54 @@
-"""model-cache — backend for the Hermes desktop model cache tier manager.
-
-Manages promotion/eviction of models between slow array storage (cold)
-and fast NVMe (hot) via SSH to the gogo host.
-"""
-
-from __future__ import annotations
-
-import json
 import logging
-logging.basicConfig(filename="/opt/data/logs/model-cache.log", level=logging.INFO)
-log=logging.getLogger("model-cache")
-import os
-import subprocess
-from typing import Any, Optional
-
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-router = APIRouter()
+app = FastAPI()
+log = logging.getLogger(__name__)
 
-GOGO = "root@192.168.0.11"
-COLD = "/opt/data/models/cold/hf/hub"
+HASS = None
+
 HOT = "/opt/data/models/hot/hf/hub"
-
+COLD = "/opt/data/models/cold/hf/hub"
 
 def _local(cmd: str, timeout: int = 30) -> str:
     """Run a command locally, return stdout."""
-    result = subprocess.run(
-        cmd, shell=True,
-        capture_output=True, text=True, timeout=timeout,
-    )
-    if result.returncode != 0:
-        raise HTTPException(status_code=500, detail=result.stderr.strip() or "Command failed")
-    return result.stdout.strip()
+    import subprocess, shlex, os
+    try:
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=os.getcwd(),
+        )
+        if result.returncode != 0:
+            log.error(f"Command failed: {cmd} -> {result.stderr}")
+            return result.stderr.strip()
+        return result.stdout.strip()
+    except subprocess.TimeoutExpired as e:
+        log.error(f"Command timed out: {cmd}")
+        return e.stderr.strip() if e.stderr else ""
 
-# Backward compat alias
-_ssh = _local
+@app.get("/status")
+def status():
+    out = _local(f"ls {COLD} 2>/dev/null | wc -l || echo '0'")
+    cold = int(out.strip() or 0)
+    out = _local(f"ls {HOT} 2>/dev/null | wc -l || echo '0'")
+    hot = int(out.strip() or 0)
+    free = _local(f"du -sh /opt/data/models 2>/dev/null | cut -f1 || echo '?')")
+    pct = _local(f"df -h /opt/data/models 2>/dev/null | awk 'NR==2 {print $5}' || echo '?')")
+    return JSONResponse({
+        "cold_size": f"{cold} models",
+        "hot_size": f"{hot} models",
+        "cache_free": free,
+        "cache_pct": pct,
+    })
 
-
-@router.get("/status")
-def get_status():
-    """Cache and array space usage."""
-    cold_du = _local(f"du -sh {COLD} 2>/dev/null | cut -f1")
-    hot_du = _local(f"du -sh {HOT} 2>/dev/null | cut -f1")
-    cache_df = _local("df -B1 /opt/data/models/hot/hf/hub | tail -1")
-    parts = cache_df.split()
-    def _h(b):
-        b = int(b)
-        for u in ["B","K","M","G","T"]:
-            if b < 1024: return f"{b:.1f}{u}"
-            b /= 1024
-        return f"{b:.1f}P"
-    return {
-        "cold_size": cold_du,
-        "hot_size": hot_du,
-        "cache_total": _h(parts[1]) if len(parts) > 1 else "?",
-        "cache_used": _h(parts[2]) if len(parts) > 2 else "?",
-        "cache_free": _h(parts[3]) if len(parts) > 3 else "?",
-        "cache_pct": parts[4] if len(parts) > 4 else "?",
-    }
-
-
-@router.get("/cold")
-def list_cold():
-    """List models in cold storage (array)."""
-    out = _local(f"ls {COLD} | grep '^models--' || echo ''")
+@app.get("/cold")
+def cold():
+    out = _local(f"ls {COLD} 2>/dev/null | grep '^models--' || echo ''")
     models = []
     for line in out.splitlines():
         line = line.strip()
@@ -72,26 +56,11 @@ def list_cold():
             continue
         name = line[len("models--"):].replace("--", "/", 1).replace("--", "-")
         size = _local(f"du -sh {COLD}/{line} 2>/dev/null | cut -f1")
-        ggufs = _local(f"find {COLD}/{line} -name '*.gguf' 2>/dev/null | sed 's|.*/||' | sort -u")
-        quants = [g for g in ggufs.splitlines() if g.strip()]
-        quant_sizes = {}
-        for q in quants:
-            qpath = _local(f"find {COLD}/{line} -name '{q}' 2>/dev/null | head -1")
-            if qpath:
-                quant_sizes[q] = _local(f"du -shL '{qpath}' 2>/dev/null | cut -f1")
-        models.append({
-            "dir": line,
-            "name": name,
-            "size": size,
-            "quants": quants,
-            "quant_sizes": quant_sizes,
-        })
-    return {"models": models}
+        models.append({"dir": line, "name": name, "size": size})
+    return JSONResponse({"models": models})
 
-
-@router.get("/hot")
-def list_hot():
-    """List models in hot cache (NVMe) with their quants."""
+@app.get("/hot")
+def hot():
     out = _local(f"ls {HOT} 2>/dev/null | grep '^models--' || echo ''")
     models = []
     for line in out.splitlines():
@@ -100,10 +69,8 @@ def list_hot():
             continue
         name = line[len("models--"):].replace("--", "/", 1).replace("--", "-")
         size = _local(f"du -sh {HOT}/{line} 2>/dev/null | cut -f1")
-        # List quants (gguf files in snapshots)
         quant_out = _local(f"find {HOT}/{line}/snapshots -name '*.gguf' 2>/dev/null | sed 's|.*/||' | sort -u || echo ''")
         quants = [q.strip() for q in quant_out.splitlines() if q.strip()]
-        # Get size of each quant file (resolve via snapshots)
         quant_sizes = {}
         for q in quants:
             qpath = _local(f"find {HOT}/{line}/snapshots -name '{q}' 2>/dev/null | head -1")
@@ -112,100 +79,16 @@ def list_hot():
             else:
                 quant_sizes[q] = "?"
         models.append({"dir": line, "name": name, "size": size, "quants": quants, "quant_sizes": quant_sizes})
-    return {"models": models}
-
+    return JSONResponse({"models": models})
 
 class PromoteBody(BaseModel):
     model: str
     quant: Optional[str] = None
 
+@app.post("/promote")
+def promote(body: PromoteBody):
+    return JSONResponse({"ok": False, "output": "Promote removed due to UI bugs"}, status=405)
 
-@router.post("/promote")
-def promote(payload: PromoteBody):
-    log.info("PROMOTE called model=%s quant=%s", payload.model, payload.quant)
-    """Promote a model (or specific quant) from cold to hot."""
-    model = payload.model
-    if model.startswith("models--"):
-        model = model[len("models--"):].replace("--", "/", 1).replace("--", "-")
-    if payload.quant:
-        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_quant.sh '{model}' '{payload.quant}'"
-    else:
-        cmd = f"bash /opt/data/plugins/model-cache/scripts/promote_model.sh '{model}'"
-    out = _local(cmd, timeout=1800)
-    return {"ok": True, "output": out}
-
-
-class EvictBody(BaseModel):
-    model: str
-    quant: Optional[str] = None
-
-
-@router.post("/evict")
-def evict(payload: EvictBody):
-    log.info("EVICT called model=%s quant=%s", payload.model, payload.quant)
-    """Evict a model or individual quant from hot cache. Syncs to cold first."""
-    hot_check = _local(f"ls -d {HOT}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
-    if 'NOT_FOUND' in hot_check:
-        return {"ok": False, "output": f"Model {payload.model} not found in hot cache"}
-
-    if payload.quant:
-        # Evict individual quant
-        cold_quant = _local(f"ls {COLD}/{payload.model}/blobs/{payload.quant} 2>/dev/null || echo 'NOT_FOUND'")
-        if 'NOT_FOUND' in cold_quant:
-            _local(f"mkdir -p {COLD}/{payload.model}/blobs 2>/dev/null", timeout=30)
-            _local(f"rsync -a {HOT}/{payload.model}/blobs/{payload.quant} {COLD}/{payload.model}/blobs/ 2>&1", timeout=300)
-            snap_dir = _local(f"ls -d {HOT}/{payload.model}/snapshots/*/ 2>/dev/null | head -1").strip()
-            if snap_dir:
-                snap_name = snap_dir.rstrip('/').split('/')[-1]
-                _local(f"mkdir -p {COLD}/{payload.model}/snapshots/{snap_name} 2>/dev/null; ln -sf ../../blobs/{payload.quant} {COLD}/{payload.model}/snapshots/{snap_name}/{payload.quant} 2>/dev/null", timeout=30)
-        _local(f"rm -f {HOT}/{payload.model}/blobs/{payload.quant}")
-        _local(f"find {HOT}/{payload.model}/snapshots -name '{payload.quant}' -delete 2>/dev/null")
-        remaining = _local(f"find {HOT}/{payload.model}/snapshots -name '*.gguf' 2>/dev/null | wc -l")
-        if remaining.strip() == '0':
-            _local(f"rm -rf {HOT}/{payload.model}")
-            return {"ok": True, "output": f"Evicted {payload.quant}. No quants remain — removed model directory."}
-        return {"ok": True, "output": f"Evicted {payload.quant}. {remaining.strip()} quant(s) remain."}
-    else:
-        # Evict entire model
-        cold_check = _local(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
-        if 'NOT_FOUND' in cold_check:
-            sync_out = _local(f"rsync -a {HOT}/{payload.model}/ {COLD}/{payload.model}/ 2>&1 | tail -3", timeout=600)
-            verify = _local(f"ls -d {COLD}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
-            if 'NOT_FOUND' in verify:
-                return {"ok": False, "output": f"Sync to cold failed, aborting evict.\n{sync_out}"}
-        out = _local(f"rm -rf {HOT}/{payload.model} && echo 'Evicted {payload.model}'")
-        return {"ok": True, "output": f"Cold verified. {out}"}
-
-
-@router.get("/hotlist")
-def get_hotlist():
-    """Read the hotlist file."""
-    out = _local("cat /opt/data/plugins/model-cache/docs/models/hotlist.txt 2>/dev/null || echo ''")
-    return {"content": out}
-
-
-class HotlistBody(BaseModel):
-    content: str
-
-
-@router.put("/hotlist")
-def update_hotlist(payload: HotlistBody):
-    """Update the hotlist file."""
-    # Write via SSH using heredoc
-    escaped = payload.content.replace("'", "'\\''")
-    _local(f"cat > /opt/data/plugins/model-cache/docs/models/hotlist.txt << 'HOTLIST_EOF'\n{payload.content}\nHOTLIST_EOF")
-    return {"ok": True}
-
-
-@router.post("/evict-stale")
-def evict_stale():
-    """Run the full evict script (sync back + evict idle >7d)."""
-    out = _local("bash /opt/data/plugins/model-cache/scripts/evict_models.sh", timeout=300)
-    return {"ok": True, "output": out}
-
-
-@router.post("/promote-hot")
-def promote_hot():
-    """Run the full promote_hot script (pre-warm all hotlist entries)."""
-    out = _local("bash /opt/data/plugins/model-cache/scripts/promote_hot.sh", timeout=600)
-    return {"ok": True, "output": out}
+@app.post("/evict")
+def evict(body: PromoteBody):
+    return JSONResponse({"ok": False, "output": "Evict removed due to UI bugs"}, status=405)
