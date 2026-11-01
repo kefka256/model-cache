@@ -100,11 +100,14 @@ def list_hot():
         # List quants (gguf files in snapshots)
         quant_out = _local(f"find {HOT}/{line}/snapshots -name '*.gguf' 2>/dev/null | sed 's|.*/||' | sort -u || echo ''")
         quants = [q.strip() for q in quant_out.splitlines() if q.strip()]
-        # Get size of each quant blob
+        # Get size of each quant file (resolve via snapshots)
         quant_sizes = {}
         for q in quants:
-            qsize = _local(f"du -sh {HOT}/{line}/blobs/{q} 2>/dev/null | cut -f1")
-            quant_sizes[q] = qsize
+            qpath = _local(f"find {HOT}/{line}/snapshots -name '{q}' 2>/dev/null | head -1")
+            if qpath:
+                quant_sizes[q] = _local(f"du -sh '{qpath}' 2>/dev/null | cut -f1")
+            else:
+                quant_sizes[q] = "?"
         models.append({"dir": line, "name": name, "size": size, "quants": quants, "quant_sizes": quant_sizes})
     return {"models": models}
 
