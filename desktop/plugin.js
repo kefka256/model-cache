@@ -1,4 +1,4 @@
-import { cn, host, useMutation } from '@hermes/plugin-sdk'
+import { useMutation } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 
@@ -160,7 +160,7 @@ function ModelCachePane({ rest }) {
       jsxs('div', {
         className: 'flex items-center justify-between text-xs text-(--ui-text-tertiary)',
         children: [
-          jsx('span', { children: `v0.1.18 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
+          jsx('span', { children: `v0.1.19 | Cold: ${statusData.cold_size || '?'} | Hot: ${statusData.hot_size || '?'}` }),
           jsxs('div', {
             className: 'flex items-center gap-2',
             children: [
