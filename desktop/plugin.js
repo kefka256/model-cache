@@ -89,11 +89,13 @@ function ModelCachePane({ rest }) {
     } catch(e) {}
     try {
       const c = await stableRest('/cold', { method: 'GET' })
-      setColdModels((c && c.models) ? c.models : [])
+      const cold = (c && c.models) ? c.models : []
+      setColdModels(Array.from(new Map(cold.map(m => [m.dir, m])).values()))
     } catch(e) {}
     try {
       const h = await stableRest('/hot', { method: 'GET' })
-      setHotModels((h && h.models) ? h.models : [])
+      const hot = (h && h.models) ? h.models : []
+      setHotModels(Array.from(new Map(hot.map(m => [m.dir, m])).values()))
     } catch(e) {}
     fetchingRef.current = false
   }, [rest])
