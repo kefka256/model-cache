@@ -64,6 +64,8 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
 }
 
 function ModelCachePane({ rest }) {
+  // Stabilize rest function reference to prevent unnecessary re-renders
+  const stableRest = useMemo(() => rest, [rest])
   const qc = useQueryClient()
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
   const [refreshing, setRefreshing] = useState(false)
@@ -75,15 +77,15 @@ function ModelCachePane({ rest }) {
 
   const fetchAll = useCallback(async () => {
     try {
-      const s = await rest('/status', { method: 'GET' })
+      const s = await stableRest('/status', { method: 'GET' })
       setStatusData(s || {})
     } catch(e) {}
     try {
-      const c = await rest('/cold', { method: 'GET' })
+      const c = await stableRest('/cold', { method: 'GET' })
       setColdModels((c && c.models) ? c.models : [])
     } catch(e) {}
     try {
-      const h = await rest('/hot', { method: 'GET' })
+      const h = await stableRest('/hot', { method: 'GET' })
       setHotModels((h && h.models) ? h.models : [])
     } catch(e) {}
   }, [rest])
@@ -91,7 +93,7 @@ function ModelCachePane({ rest }) {
   useEffect(() => { fetchAll() }, [])
 
   const promoteMut = useMutation({
-    mutationFn: (dir) => rest('/promote', { method: 'POST', body: { model: dir } }),
+    mutationFn: (dir) => stableRest('/promote', { method: 'POST', body: { model: dir } }),
     onSuccess: (data, dir) => {
       if (data && data.ok) {
         setRecentlyPromoted(prev => new Set([...prev, dir]))
@@ -101,7 +103,7 @@ function ModelCachePane({ rest }) {
   })
 
   const evictMut = useMutation({
-    mutationFn: ({ model, quant }) => rest('/evict', { method: 'POST', body: { model, quant } }),
+    mutationFn: ({ model, quant }) => stableRest('/evict', { method: 'POST', body: { model, quant } }),
     onSuccess: (data) => {
       if (data && data.ok) {
         fetchAll()
