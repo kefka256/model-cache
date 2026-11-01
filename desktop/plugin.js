@@ -178,10 +178,15 @@ function ModelCachePane({ rest }) {
         ]
       }),
       promoteMut.isPending ? jsxs('div', {
-        className: 'text-xs text-(--ui-text-tertiary) mt-1 px-2 flex items-center gap-1',
+        className: 'text-xs text-(--ui-text-tertiary) mt-1 px-2 flex flex-col gap-1',
         children: [
-          jsx('span', { className: 'animate-spin inline-block', children: '↻' }),
-          jsx('span', { children: 'Promoting... (this may take a while)' }),
+          jsxs('div', { className: 'flex items-center gap-1', children: [
+            jsx('span', { className: 'animate-spin inline-block', children: '↻' }),
+            jsx('span', { children: 'Promoting... (this may take a while)' }),
+          ]}),
+          jsx('div', { className: 'h-1 w-full bg-(--ui-stroke-secondary) rounded overflow-hidden', children:
+            jsx('div', { className: 'h-full bg-(--accent) animate-pulse', style: { width: '70%' } })
+          }),
         ]
       }) : promoteMut.data ? jsx('div', {
         className: 'text-xs text-(--ui-text-quaternary) mt-1 px-2',
