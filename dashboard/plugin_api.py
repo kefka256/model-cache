@@ -7,6 +7,9 @@ and fast NVMe (hot) via SSH to the gogo host.
 from __future__ import annotations
 
 import json
+import logging
+logging.basicConfig(filename="/opt/data/logs/model-cache.log", level=logging.INFO)
+log=logging.getLogger("model-cache")
 import os
 import subprocess
 from typing import Any, Optional
@@ -119,6 +122,7 @@ class PromoteBody(BaseModel):
 
 @router.post("/promote")
 def promote(payload: PromoteBody):
+    log.info("PROMOTE called model=%s quant=%s", payload.model, payload.quant)
     """Promote a model (or specific quant) from cold to hot."""
     model = payload.model
     if model.startswith("models--"):
@@ -138,6 +142,7 @@ class EvictBody(BaseModel):
 
 @router.post("/evict")
 def evict(payload: EvictBody):
+    log.info("EVICT called model=%s quant=%s", payload.model, payload.quant)
     """Evict a model or individual quant from hot cache. Syncs to cold first."""
     hot_check = _local(f"ls -d {HOT}/{payload.model} 2>/dev/null || echo 'NOT_FOUND'")
     if 'NOT_FOUND' in hot_check:

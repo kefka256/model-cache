@@ -28,7 +28,7 @@ function ModelGroup({ model, action, onActionQuant, onActionAll, promoting }) {
           }),
           jsx('button', {
             className: `px-2 py-0.5 rounded text-(--ui-text-tertiary) ${isPromote ? 'hover:text-green-400' : 'hover:text-red-400'}`,
-            onClick: () => onActionAll(model.dir),
+            onClick: () => { console.log('actionAll', model.dir); onActionAll(model.dir) },
             disabled: promoting,
             children: promoting ? '...' : (isPromote ? 'promote all' : 'evict all')
           })
@@ -50,7 +50,7 @@ function ModelGroup({ model, action, onActionQuant, onActionAll, promoting }) {
                 }),
                 jsx('button', {
                   className: `px-1.5 py-0.5 rounded text-(--ui-text-quaternary) ${isPromote ? 'hover:text-green-400' : 'hover:text-red-400'} text-[10px]`,
-                  onClick: () => onActionQuant(model.dir, q),
+                  onClick: () => { console.log('actionQuant', model.dir, q); onActionQuant(model.dir, q) },
                   disabled: promoting,
                   children: isPromote ? 'promote' : 'evict'
                 })
