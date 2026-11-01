@@ -62,44 +62,52 @@ function ModelGroup({ model, onEvictQuant, onEvictAll, promoting }) {
 }
 
 function ModelCachePane({ rest }) {
-  const stableRest = useMemo(() => rest, [rest])
   const qc = useQueryClient()
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
   const [refreshing, setRefreshing] = useState(false)
-
   const fetchingRef = useRef(false)
+
   const [statusData, setStatusData] = useState({})
   const [coldModels, setColdModels] = useState([])
   const [hotModels, setHotModels] = useState([])
 
+  const restRef = useRef(rest)
+  useEffect(() => {
+    restRef.current = rest
+  }, [rest])
 
   const fetchAll = useCallback(async () => {
     if (fetchingRef.current) return
     fetchingRef.current = true
+
     setStatusData({})
     setColdModels([])
     setHotModels([])
+
     try {
-      const s = await stableRest('/status', { method: 'GET' })
+      const s = await restRef.current('/status', { method: 'GET' })
       setStatusData(s || {})
     } catch(e) {}
     try {
-      const c = await stableRest('/cold', { method: 'GET' })
+      const c = await restRef.current('/cold', { method: 'GET' })
       const cold = (c && c.models) ? c.models : []
       setColdModels(Array.from(new Map(cold.map(m => [m.dir, m])).values()))
     } catch(e) {}
     try {
-      const h = await stableRest('/hot', { method: 'GET' })
+      const h = await restRef.current('/hot', { method: 'GET' })
       const hot = (h && h.models) ? h.models : []
       setHotModels(Array.from(new Map(hot.map(m => [m.dir, m])).values()))
     } catch(e) {}
-    fetchingRef.current = false
-  }, [rest])
 
-  useEffect(() => { fetchAll() }, [])
+    fetchingRef.current = false
+  }, [])
+
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
 
   const promoteMut = useMutation({
-    mutationFn: (dir) => stableRest('/promote', { method: 'POST', body: { model: dir } }),
+    mutationFn: (dir) => restRef.current('/promote', { method: 'POST', body: { model: dir } }),
     onSuccess: (data, dir) => {
       if (data && data.ok) {
         setRecentlyPromoted(prev => new Set([...prev, dir]))
@@ -109,7 +117,7 @@ function ModelCachePane({ rest }) {
   })
 
   const evictMut = useMutation({
-    mutationFn: ({ model, quant }) => stableRest('/evict', { method: 'POST', body: { model, quant } }),
+    mutationFn: ({ model, quant }) => restRef.current('/evict', { method: 'POST', body: { model, quant } }),
     onSuccess: (data) => {
       if (data && data.ok) {
         fetchAll()
