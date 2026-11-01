@@ -1,5 +1,5 @@
 name: model-cache
-version: "0.1.22"
+version: "0.1.23"
 description: "Model cache tier manager — promote/evict full models or specific quants from cold to hot storage."
 author: hermes
 kind: standalone
