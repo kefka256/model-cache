@@ -196,7 +196,7 @@ function ModelCachePane({ rest }) {
         children: `Hot (NVMe) — ${hotModels.length} models`
       }),
       ...hotModels.map(m => jsx(ModelGroup, {
-        key: m.dir,
+        key: `hot-${m.dir}`,
         model: m,
         action: 'evict',
         onActionQuant: (model, quant) => evictMut.mutate({ model, quant }),
@@ -208,7 +208,7 @@ function ModelCachePane({ rest }) {
         children: `Cold (Array) — ${coldModels.length} models`
       }),
       ...coldModels.map(m => jsx(ModelGroup, {
-        key: m.dir,
+        key: `cold-${m.dir}`,
         model: m,
         action: 'promote',
         onActionQuant: (model, quant) => promoteMut.mutate({ model, quant }),
