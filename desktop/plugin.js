@@ -15,12 +15,11 @@ function ModelGroup({ model, action, rest }) {
     try {
       await rest('/promote', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           model: model.dir,
           action: 'promote',
           quant
-        })
+        }
       })
     } finally {
       setLoading(false)
@@ -32,12 +31,11 @@ function ModelGroup({ model, action, rest }) {
     try {
       await rest('/evict', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           model: model.dir,
           action: 'evict',
           quant
-        })
+        }
       })
     } finally {
       setLoading(false)
