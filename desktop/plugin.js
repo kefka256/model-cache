@@ -80,26 +80,31 @@ function ModelCachePane({ rest }) {
     if (fetchingRef.current) return
     fetchingRef.current = true
 
-    setStatusData({})
-    setColdModels([])
-    setHotModels([])
-
     try {
-      const s = await restRef.current('/status', { method: 'GET' })
+      const [s, c, h] = await Promise.all([
+        restRef.current('/status', { method: 'GET' }).catch(() => null),
+        restRef.current('/cold', { method: 'GET' }).catch(() => null),
+        restRef.current('/hot', { method: 'GET' }).catch(() => null)
+      ])
+
+      const coldList = (c && c.models) ? c.models : []
+      const hotList = (h && h.models) ? h.models : []
+
+      const uniqueCold = Array.from(
+        new Map(coldList.filter(m => m && m.dir).map(m => [m.dir, m])).values()
+      )
+      const uniqueHot = Array.from(
+        new Map(hotList.filter(m => m && m.dir).map(m => [m.dir, m])).values()
+      )
+
       setStatusData(s || {})
-    } catch(e) {}
-    try {
-      const c = await restRef.current('/cold', { method: 'GET' })
-      const cold = (c && c.models) ? c.models : []
-      setColdModels(Array.from(new Map(cold.map(m => [m.dir, m])).values()))
-    } catch(e) {}
-    try {
-      const h = await restRef.current('/hot', { method: 'GET' })
-      const hot = (h && h.models) ? h.models : []
-      setHotModels(Array.from(new Map(hot.map(m => [m.dir, m])).values()))
-    } catch(e) {}
-
-    fetchingRef.current = false
+      setColdModels(uniqueCold)
+      setHotModels(uniqueHot)
+    } catch (e) {
+      console.error("Failed to fetch cache data", e)
+    } finally {
+      fetchingRef.current = false
+    }
   }, [])
 
   useEffect(() => {
