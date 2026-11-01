@@ -15,14 +15,15 @@ COLD = "/opt/data/models/cold/hf/hub"
 
 def _local(cmd: str, timeout: int = 30) -> str:
     """Run a command locally, return stdout."""
-    import subprocess, shlex, os
+    import subprocess, os
     try:
         result = subprocess.run(
-            shlex.split(cmd),
+            cmd,
             capture_output=True,
             text=True,
             timeout=timeout,
             cwd=os.getcwd(),
+            shell=True,
         )
         if result.returncode != 0:
             log.error(f"Command failed: {cmd} -> {result.stderr}")
