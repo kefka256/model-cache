@@ -10,7 +10,7 @@ function ModelGroup({ model, action, rest }) {
   const quants = model.quants || []
   const quantSizes = model.quant_sizes || {}
 
-  const doPromote = async (quant?: string) => {
+  const doPromote = async (quant) => {
     setLoading(true)
     try {
       await rest('/promote', {
@@ -27,7 +27,7 @@ function ModelGroup({ model, action, rest }) {
     }
   }
 
-  const doEvict = async (quant?: string) => {
+  const doEvict = async (quant) => {
     setLoading(true)
     try {
       await rest('/evict', {
