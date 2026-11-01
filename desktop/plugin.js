@@ -80,6 +80,9 @@ function ModelCachePane({ rest }) {
   const fetchAll = useCallback(async () => {
     if (fetchingRef.current) return
     fetchingRef.current = true
+    // Clear before fetch to avoid stale accumulation on refresh
+    setColdModels([])
+    setHotModels([])
 
     try {
       const [s, c, h] = await Promise.all([
