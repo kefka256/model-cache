@@ -70,12 +70,19 @@ function ModelCachePane({ rest }) {
   const [recentlyPromoted, setRecentlyPromoted] = useState(new Set())
   const [refreshing, setRefreshing] = useState(false)
 
+  const fetchingRef = useRef(false)
   const [statusData, setStatusData] = useState({})
   const [coldModels, setColdModels] = useState([])
   const [hotModels, setHotModels] = useState([])
 
 
   const fetchAll = useCallback(async () => {
+    if (fetchingRef.current) return
+    fetchingRef.current = true
+    // Clear view before refresh to avoid stale/duplicate accumulation
+    setStatusData({})
+    setColdModels([])
+    setHotModels([])
     try {
       const s = await stableRest('/status', { method: 'GET' })
       setStatusData(s || {})
@@ -88,6 +95,7 @@ function ModelCachePane({ rest }) {
       const h = await stableRest('/hot', { method: 'GET' })
       setHotModels((h && h.models) ? h.models : [])
     } catch(e) {}
+    fetchingRef.current = false
   }, [rest])
 
   useEffect(() => { fetchAll() }, [])
