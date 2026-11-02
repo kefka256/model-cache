@@ -257,27 +257,33 @@ def hot():
 
 @router.post("/promote")
 def promote(body: PromoteBody):
+    log.info(f"PROMOTE request: model={body.model}, action={body.action}, quant={body.quant}")
     try:
         org, model_name = _parse_model_id(body.model)
     except ValueError as e:
+        log.error(f"PROMOTE invalid model_id: {body.model} -> {e}")
         return JSONResponse({"ok": False, "output": str(e)}, status_code=400)
     
     if body.quant:
         out = _promote_quant(org, model_name, body.quant)
     else:
         out = _promote_model(org, model_name)
+    log.info(f"PROMOTE result: {out}")
     return JSONResponse({"ok": True, "output": out})
 
 
 @router.post("/evict")
 def evict(body: EvictBody):
+    log.info(f"EVICT request: model={body.model}, action={body.action}, quant={body.quant}")
     try:
         org, model_name = _parse_model_id(body.model)
     except ValueError as e:
+        log.error(f"EVICT invalid model_id: {body.model} -> {e}")
         return JSONResponse({"ok": False, "output": str(e)}, status_code=400)
     
     if body.quant:
         out = _evict_quant(org, model_name, body.quant)
     else:
         out = _evict_model(org, model_name)
+    log.info(f"EVICT result: {out}")
     return JSONResponse({"ok": True, "output": out})
