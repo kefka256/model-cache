@@ -1,5 +1,6 @@
 import logging
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, HTTPException
@@ -7,6 +8,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+if not log.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+    log.addHandler(handler)
+    log.propagate = False
+
 router = APIRouter()
 
 HOT = "/opt/data/models/hot/hf/hub"
